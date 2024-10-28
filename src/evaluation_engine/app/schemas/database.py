@@ -37,9 +37,7 @@ class Evaluation(BaseModel):
 
 class EvaluationModel(BaseModel):
     id: str
-    manager: str
-    assistant: str
-    filename: str
+    transcription_id: str
     transcription: str
     evaluation: Evaluation
     is_valid_call: str

@@ -31,7 +31,7 @@ tags_metadata: list[dict] = [
     {
         "name": "Background Tasks",
         "description": """
-        Endpoints for executing background tasks for batch processing of audio files.
+        Endpoints for executing background tasks for operating asynchronous tasks.
         """,
     },
     {

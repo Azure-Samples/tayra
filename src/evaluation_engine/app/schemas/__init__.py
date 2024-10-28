@@ -8,20 +8,10 @@ __all__ = [
     "EvaluationItem",
     "Evaluation",
     "HumanEvaluation",
-    "Transcription",
-    "Specialist",
-    "Manager",
-    "TranscriptionJobParams",
-    "ManagerInterface",
-    "SpecialistInterface",
-    "UploadJobParams",
+    "EvaluationEndpoint",
     "UnitaryEvaluation",
-    "AditionalEvaluation",
-    "QueryTemplate",
-    "ComplexQueryTemplate",
-    "TableToNaturalTemplate",
-    "SingleEvaluationTemplate",
-    "TranscriptionImprovementTemplate",
+    "EvaluationJob",
+    "Transcription",
     "Item",
     "TranscriptionImprovementRequest",
     "database_schema"
@@ -29,30 +19,16 @@ __all__ = [
 __author__ = "LATAM AI GBB TEAM"
 
 
-from .chat import (
-    ComplexQueryTemplate,
-    QueryTemplate,
-    SingleEvaluationTemplate,
-    TableToNaturalTemplate,
-    TranscriptionImprovementTemplate,
-)
 from .database import database_schema
-from .endpoints import (
-    ManagerInterface,
-    SpecialistInterface,
-    TranscriptionJobParams,
-    UploadJobParams,
-)
+from .endpoints import EvaluationEndpoint
+
 from .models import (
-    AditionalEvaluation,
     Evaluation,
     EvaluationItem,
     HumanEvaluation,
     Item,
-    Manager,
-    Specialist,
-    Transcription,
     TranscriptionImprovementRequest,
     UnitaryEvaluation,
 )
+from .prompts import EvaluationJob, Transcription
 from .responses import RESPONSES, BodyMessage
