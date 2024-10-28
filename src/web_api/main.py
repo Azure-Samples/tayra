@@ -17,24 +17,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from app.background import run_evaluation_job, run_transcription_job, run_upload_job
-from app.chat import ChatWithCosmos
-from app.database import load_manager_data, load_transcription_data
-from app.jobs import (
-    get_blob_properties,
-    improve_transcription,
-    set_human_evaluation,
-    set_unitary_evaluation
-)
-from app.schemas import (
-    RESPONSES,
-    BodyMessage,
-    HumanEvaluation,
-    TranscriptionImprovementRequest,
-    TranscriptionJobParams,
-    UnitaryEvaluation,
-    UploadJobParams,
-)
+from app.background import run_upload_job
+from app.jobs import get_blob_properties
+from app.schemas import RESPONSES, BodyMessage, UploadJobParams
 
 load_dotenv(find_dotenv())
 
@@ -143,49 +128,7 @@ async def audio_upload(
     return JSONResponse({"result": "Sua requisição está sendo processada."})
 
 
-@app.post("/transcription", tags=["Tarefas em Segundo Plano"])
-async def transcribe(
-    background_tasks: BackgroundTasks, params: TranscriptionJobParams
-) -> JSONResponse:
-    """
-    Endpoint para reprocessar lotes de arquivos.
-    """
-    background_tasks.add_task(run_transcription_job, params)
-    return JSONResponse({"result": "Sua requisição está sendo processada."})
-
-
-@app.post("/evaluate", tags=["Tarefas em Segundo Plano"])
-async def evaluate(
-    background_tasks: BackgroundTasks, params: TranscriptionJobParams
-) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    background_tasks.add_task(run_evaluation_job, params)
-    return JSONResponse({"result": "Sua avaliação está sendo processada."})
-
-
-@app.get("/overlooker-data", tags=["Tarefas Operacionais"])
-async def get_manager_data(manager: str) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    data = await load_manager_data(manager_name=manager)
-    return JSONResponse({"result": data})
-
-
-@app.get("/transcription-data", tags=["Tarefas Operacionais"])
-async def get_transcription_data(specialist: str) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    decoded_specialist = unquote(specialist)
-    data = await load_transcription_data(specialist_name=decoded_specialist)
-    print(decoded_specialist)
-    return JSONResponse({"result": data})
-
-
-@app.get("/stream-audio", tags=["Tarefas Operacionais"])
+@app.get("/download-audio", tags=["Tarefas Operacionais"])
 async def download_audio_file(
     request: Request,
     audio_name: str
@@ -237,42 +180,3 @@ async def download_audio_file(
             status_code=500,
             detail="Audio file not found in any of the attempted formats (.mp3, .wav)."
         ) from exc
-
-
-@app.post("/human-evaluation", tags=["Tarefas Operacionais"])
-async def add_human_evaluation(transcription_id: str, evaluation: HumanEvaluation) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    data = await set_human_evaluation(transcription_id, evaluation)
-    return JSONResponse({"result": data})
-
-
-@app.post("/unitary-evaluation", tags=["Tarefas Operacionais"])
-async def add_unitary_evaluation(evaluation: UnitaryEvaluation) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    data = await set_unitary_evaluation(evaluation)
-    return JSONResponse(data)
-
-
-@app.post("/transcription-improvement", tags=["Tarefas Operacionais"])
-async def set_transcription_improvement(request: TranscriptionImprovementRequest) -> JSONResponse:
-    """
-    load_data loads the data into the Context
-    """
-    data = await improve_transcription(request.transcription_data)
-    return JSONResponse(data)
-
-
-@app.post("/chat", tags=["Tarefas Operacionais"])
-async def chat_with_data(request: Request) -> JSONResponse:
-    """
-    Gerencia o chat
-    """
-    body = await request.json()
-    question = body.get("question", "")
-    chat_engine = ChatWithCosmos(prompt=question)
-    response = await chat_engine()
-    return JSONResponse(response, media_type="text/plain")

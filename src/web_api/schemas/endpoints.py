@@ -16,7 +16,7 @@ Methods:
 - None
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
@@ -61,3 +61,59 @@ class UploadJobParams(BaseModel):
             )
         return value
 
+
+class TranscriptionJobParams(BaseModel):
+    """
+    Represents the parameters for a transcription job.
+    Attributes:
+        origin_container (str, optional): The origin container for audio files. Defaults to "audio-files".
+        destination_container (str, optional): The destination container for transcripts. Defaults to "transcripts".
+        manager_name (str, optional): The name of the manager. Defaults to None.
+        specialist_name (str, optional): The name of the specialist. Defaults to None.
+        limit (int, optional): The limit for the number of transcription jobs. Defaults to -1.
+        only_failed (bool, optional): Flag indicating whether to retrieve only failed transcription jobs. Defaults to True.
+        use_cache (bool, optional): Flag indicating whether to use cache. Defaults to False.
+    """
+
+    origin_container: Optional[str] = Field(default="audio-files")
+    destination_container: Optional[str] = Field(default="transcripts")
+    manager_name: Optional[str] = Field(default=None)
+    specialist_name: Optional[str] = Field(default=None)
+    limit: Optional[int] = Field(default=-1)
+    only_failed: Optional[bool] = Field(default=True)
+    use_cache: Optional[bool] = Field(default=False)
+    run_evaluation_flow: Optional[bool] = Field(default=True)
+
+
+class SpecialistInterface(BaseModel):
+    """
+    Represents a specialist interface.
+    Attributes:
+        name (str): The name of the specialist.
+        role (str): The role of the specialist.
+        transcriptions (int): The number of transcriptions performed by the specialist.
+        performance (int): The performance rating of the specialist.
+    """
+
+    name: str
+    role: str
+    transcriptions: int
+    performance: int
+
+
+class ManagerInterface(BaseModel):
+    """
+    A Pydantic BaseModel representing a manager interface.
+    Attributes:
+        name (str): The name of the manager.
+        role (str): The role of the manager.
+        transcriptions (int): The number of transcriptions performed by the manager.
+        performance (int): The performance rating of the manager.
+        specialists (List[SpecialistInterface]): A list of specialist interfaces associated with the manager.
+    """
+
+    name: str
+    role: str
+    transcriptions: int
+    performance: int
+    specialists: List[SpecialistInterface]

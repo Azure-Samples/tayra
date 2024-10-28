@@ -17,24 +17,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from app.background import run_evaluation_job, run_transcription_job, run_upload_job
-from app.chat import ChatWithCosmos
-from app.database import load_manager_data, load_transcription_data
-from app.jobs import (
-    get_blob_properties,
-    improve_transcription,
-    set_human_evaluation,
-    set_unitary_evaluation
-)
-from app.schemas import (
-    RESPONSES,
-    BodyMessage,
-    HumanEvaluation,
-    TranscriptionImprovementRequest,
-    TranscriptionJobParams,
-    UnitaryEvaluation,
-    UploadJobParams,
-)
+from app import __version__, __app__
+from app.background import run_upload_job
+from app.ingest import get_blob_properties
+from app.schemas import RESPONSES, BodyMessage, UploadJobParams
+
 
 load_dotenv(find_dotenv())
 
@@ -46,27 +33,29 @@ MONITOR: str = os.environ.get("AZ_CONNECTION_LOG", "")
 
 tags_metadata: list[dict] = [
     {
-        "name": "Tarefas em Segundo Plano",
+        "name": "Background Tasks",
         "description": """
-        Endpoints de execução de tarefas em segundo plano para processamento em lotes de arquivos de áudio.
+        Endpoints for executing background tasks for operating asynchronous tasks.
         """,
     },
     {
-        "name": "Tarefas Operacionais",
+        "name": "Operational Tasks",
         "description": """
-        Tarefas para a visualização e atualização síncrona de registros únicos.
+        Endpoints associated with synchronous responses for navigating users.
         """,
-    }
+    },
 ]
 
 description: str = """
-    Uma API Web para gerenciar a análise de transcrições.
+    Web API to manage audio ingestion from a Call Center.\n
+    Leveraging Azure Blob Storage, this engine enables easy integration with diferent call center audio sources.
+    Those audios are transcribed and then used on subsequent evaluations.
 """
 
 
 app: FastAPI = FastAPI(
-    title="Assistente de Análise de Transcrições",
-    version="Alpha",
+    title=__app__,
+    version=__version__,
     description=description,
     openapi_tags=tags_metadata,
     openapi_url="/api/v1/openapi.json",
@@ -110,14 +99,23 @@ async def validation_exception_handler(
     )
 
 
-@app.post("/audio-upload", tags=["Tarefas em Segundo Plano"])
+@app.post("/audio-upload", tags=["Background Tasks"])
 async def audio_upload(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     params: str = Form(...),
 ) -> JSONResponse:
     """
-    Uploads an audio file and starts a background task to process it.
+    ## Handles the upload of audio files and initiates a background task to process the upload.\n\n
+    **Args**:\n
+        background_tasks (BackgroundTasks): FastAPI's background tasks manager to handle background operations.\n
+        file (UploadFile): The uploaded file object.\n
+        params (str): JSON string containing additional parameters for the upload job.\n
+    **Returns**:\n\n
+        JSONResponse: A JSON response indicating that the request is being processed.\n
+    **Raises**:\n\n
+        HTTPException: If the provided JSON in `params` is invalid or if the file type is not supported.\n
+        AttributeError: If the uploaded file does not have a valid filename.\n
     """
     try:
         params_dict = json.loads(params)
@@ -127,11 +125,11 @@ async def audio_upload(
 
     if file.content_type not in ["application/x-zip-compressed", "audio/mpeg", "audio/wav"]:
         raise HTTPException(
-            status_code=400, detail="Tipo de arquivo não suportado. Aceitos: zip, mp3, wav."
+            status_code=400, detail="Unsuported file type. Accepted: zip, mp3, wav."
         )
 
     if not file.filename:
-        raise AttributeError("Nome de arquivo inválido.")
+        raise AttributeError("Invalid File Name.")
 
     _, ext = os.path.splitext(file.filename)
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
@@ -140,16 +138,23 @@ async def audio_upload(
 
     background_tasks.add_task(run_upload_job, temp_file_path, **upload_job_params.dict())
 
-    return JSONResponse({"result": "Sua requisição está sendo processada."})
+    return JSONResponse({"result": "Your request is being processed."})
 
 
-@app.get("/stream-audio", tags=["Tarefas Operacionais"])
+@app.get("/audio-download", tags=["Operational Tasks"])
 async def download_audio_file(
     request: Request,
     audio_name: str
 ):
     """
-    Download de um arquivo de áudio do Azure Blob Storage.
+    ## Downloads an audio file from a blob storage service in one of the supported formats (.mp3, .wav).\n\n
+    **Args**:\n
+        request (Request): The HTTP request object.\n
+        audio_name (str): The name of the audio file to be downloaded, URL-encoded.\n\n
+    **Returns**:\n
+        FileResponse: A response containing the downloaded audio file.\n\n
+    **Raises**:\n
+        HTTPException: If the audio file is not found in any of the attempted formats.
     """
 
     blob_path = "/".join(unquote(audio_name).split("/")[1:])
