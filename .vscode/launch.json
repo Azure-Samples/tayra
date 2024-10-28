@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Transcription FastAPI",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}\\src\\transcription_engine",
+      "request": "launch",
+      "module": "uvicorn",
+      "env": {
+        "Path": "${env:Path};${workspaceFolder}\\src"
+      },
+      "args": ["app.main:app", "--reload"],
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Python Debugger: Evaluation FastAPI",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}\\src\\evaluation_engine",
+      "request": "launch",
+      "module": "uvicorn",
+      "env": {
+        "Path": "${env:Path};${workspaceFolder}\\src"
+      },
+      "args": ["app.main:app", "--reload"],
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Python Debugger: Python File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}"
+    }
+  ]
+}
