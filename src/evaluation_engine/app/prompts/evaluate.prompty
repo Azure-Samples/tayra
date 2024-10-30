@@ -29,6 +29,7 @@ In your responses, always include the rationale behind your evaluations.
 # Formating
 - You must guarantee that the output is a valid JSON object.
 - For the evaluation, your output **must contain all the fields in the structure mentioned bellow**:
+  - evaluation [Dictionary that contains the evaluation information]
     - criteria [Dictionary that contains a single criteria used information]
       - sub_criteria [Dictionary that contains the sub criteria used information]
         - score [Score assigned to the criteria]
