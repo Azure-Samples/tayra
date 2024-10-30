@@ -1,6 +1,9 @@
+import { Transcription } from "@/types/transcription";
+
+
 export type Specialist = {
   name: string;
   role: string;
-  transcriptions: number;
+  transcriptions: Transcription[];
   performance: number;
 };

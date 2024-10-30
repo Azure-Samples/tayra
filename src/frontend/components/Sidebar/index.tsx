@@ -15,14 +15,41 @@ interface SidebarProps {
 
 const menuGroups = [
   {
-    name: "GERENCIADOR DE TRANSCRIÇÕES",
+    name: "TAYRA - CALLCENTER ANALYTICS",
     menuItems: [
       {
         icon: (
           <svg
+              width="25"
+              height="25"
+              viewBox="0 0 100 100"
+              xmlns="http://www.w3.org/2000/svg"
+          >
+              <circle cx="50" cy="50" r="45" stroke="black" stroke-width="2" fill="none" />
+              <g fill="black">
+                  <rect x="47" y="5" width="6" height="10" />
+                  <rect x="47" y="85" width="6" height="10" />
+                  <rect x="5" y="47" width="10" height="6" />
+                  <rect x="85" y="47" width="10" height="6" />
+                  
+                  <rect x="20" y="20" width="6" height="10" transform="rotate(45 20 20)" />
+                  <rect x="75" y="20" width="6" height="10" transform="rotate(-45 75 20)" />
+                  <rect x="20" y="75" width="6" height="10" transform="rotate(-45 20 75)" />
+                  <rect x="75" y="75" width="6" height="10" transform="rotate(45 75 75)" />
+              </g>
+              <circle cx="50" cy="50" r="20" fill="none" stroke="black" stroke-width="2" />
+              <circle cx="50" cy="50" r="6" fill="black" />
+          </svg>
+        ),
+        label: "Configuration",
+        route: "/configuration",
+      },
+      {
+        icon: (
+          <svg
             className="fill-current"
-            width="18"
-            height="18"
+            width="25"
+            height="25"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -33,15 +60,15 @@ const menuGroups = [
             />
           </svg>
         ),
-        label: "Processamento",
-        route: "/upload",
+        label: "Job Management",
+        route: "/jobs",
       },
       {
         icon: (
           <svg
             className="fill-current"
-            width="18"
-            height="18"
+            width="25"
+            height="25"
             viewBox="0 0 18 18"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -56,15 +83,15 @@ const menuGroups = [
             />
           </svg>
         ),
-        label: "Avaliar Transcrições",
+        label: "Transcription Analysis",
         route: "/transcriptions",
       },
       {
         icon: (
           <svg
             className="fill-current"
-            width="24"
-            height="24"
+            width="25"
+            height="25"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -75,7 +102,7 @@ const menuGroups = [
             />
           </svg>
         ),
-        label: "Perguntas e Respostas",
+        label: "Chat with your Data",
         route: "/chat",
       }
     ]
@@ -93,7 +120,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* <!-- SIDEBAR HEADER --> */}
         <div className="flex flex-col items-center justify-center">
           <Link href="/">
             <Image
@@ -105,8 +131,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
             />
           </Link>
         </div>
-        {/* <!-- SIDEBAR HEADER --> */}
-
+       
         <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
           {/* <!-- Sidebar Menu --> */}
           <nav className="mt-5 px-4 py-4 lg:mt-9 lg:px-6">
@@ -115,7 +140,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark2">
                   {group.name}
                 </h3>
-
                 <ul className="mb-6 flex flex-col gap-1.5">
                   {group.menuItems.map((menuItem, menuIndex) => (
                     <SidebarItem

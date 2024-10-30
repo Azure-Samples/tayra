@@ -15,6 +15,7 @@ class Transcription(BaseModel):
 
 
 class SpecialistItem(BaseModel):
+    id: str
     name: str
     transcriptions: List[Transcription]
     role: Optional[str] = Field(default="Specialist", title="The role of the assistant")
@@ -24,6 +25,7 @@ class SpecialistItem(BaseModel):
 
 
 class ManagerItem(BaseModel):
+    id: str
     name: str
     assistants: List[SpecialistItem]
     role: Optional[str] = Field(default="Manager", title="The role of the manager")

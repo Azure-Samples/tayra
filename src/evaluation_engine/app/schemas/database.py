@@ -16,23 +16,22 @@ Methods:
 - None
 """
 
-from typing import List
-
+from typing import List, Optional
 from pydantic import BaseModel
 
 
 class EvaluationItem(BaseModel):
     item: str
     sub_item: str
-    descricao: str
-    peso: int
+    description: str
+    score: int
 
 
 class Evaluation(BaseModel):
     items: List[EvaluationItem]
-    pontuacao_total: int
-    classificao: str
-    sugestoes_melhoria: str
+    total_score: Optional[int]
+    classification: Optional[str]
+    improvement_suggestions: Optional[str]
 
 
 class EvaluationModel(BaseModel):
@@ -40,12 +39,6 @@ class EvaluationModel(BaseModel):
     transcription_id: str
     transcription: str
     evaluation: Evaluation
-    is_valid_call: str
-    _rid: str
-    _self: str
-    _etag: str
-    _attachments: str
-    _ts: int
 
 
 database_schema = {

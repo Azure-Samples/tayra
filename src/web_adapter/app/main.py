@@ -136,7 +136,7 @@ async def audio_upload(
         temp_file.write(await file.read())
         temp_file_path = temp_file.name
 
-    background_tasks.add_task(run_upload_job, temp_file_path, **upload_job_params.dict())
+    background_tasks.add_task(run_upload_job, temp_file_path, **upload_job_params.model_dump())
 
     return JSONResponse({"result": "Your request is being processed."})
 

@@ -5,15 +5,15 @@ import { Metadata } from "next";
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
 
 export const metadata: Metadata = {
-  title: "Avaliação de Trascrições | Gerentes",
+  title: "Transcription Evaluation | Managers",
   description:
-    "Avalie as transcrições dos gerentes e especialistas da sua equipe.",
+    "Evaluate the transcriptions of your team's managers and specialists.",
 };
 
 const TablesPage = () => {
   return (
     <DefaultLayout>
-      <Breadcrumb pageName="Avaliar Transcrições" />
+      <Breadcrumb pageName="Transcription Analysis" />
       <div className="flex flex-col gap-10">
         <CardLayout />
       </div>

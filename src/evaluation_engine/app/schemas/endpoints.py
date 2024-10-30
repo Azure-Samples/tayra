@@ -16,15 +16,17 @@ Methods:
 - None
 """
 
+from typing import List
 from pydantic import BaseModel
-from .prompts import EvaluationJob
+from .prompts import Criteria
 
 
 class TranscriptionInterface(BaseModel):
+    id: str
     transcription: str
-    transcription_id: str
 
 
 class EvaluationEndpoint(BaseModel):
-    transcription: TranscriptionInterface
-    job: EvaluationJob
+    theme: str
+    transcriptions: List[TranscriptionInterface]
+    criteria: List[Criteria]

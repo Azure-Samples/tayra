@@ -10,17 +10,17 @@ __all__ = [
     "HumanEvaluation",
     "EvaluationEndpoint",
     "UnitaryEvaluation",
-    "EvaluationJob",
     "Transcription",
     "Item",
     "TranscriptionImprovementRequest",
+    "TranscriptionInterface",
     "database_schema"
 ]
 __author__ = "LATAM AI GBB TEAM"
 
 
 from .database import database_schema
-from .endpoints import EvaluationEndpoint
+from .endpoints import EvaluationEndpoint, TranscriptionInterface
 
 from .models import (
     Evaluation,
@@ -30,5 +30,5 @@ from .models import (
     TranscriptionImprovementRequest,
     UnitaryEvaluation,
 )
-from .prompts import EvaluationJob, Transcription
+from .prompts import Transcription
 from .responses import RESPONSES, BodyMessage

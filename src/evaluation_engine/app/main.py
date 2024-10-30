@@ -4,8 +4,14 @@ The configuration for the web api.
 
 import os
 
+from typing import List
+
 from promptflow import _PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
+
+from azure.identity.aio import DefaultAzureCredential
+from azure.cosmos.aio import CosmosClient
+from azure.cosmos import exceptions
 
 from dotenv import find_dotenv, load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Request, status
@@ -30,15 +36,16 @@ from app.schemas import (
 load_dotenv(find_dotenv())
 
 BLOB_CONN = os.getenv("BLOB_CONNECTION_STRING", "")
-MODEL_URL: str = os.environ.get("GPT4O_URL", "")
-MODEL_KEY: str = os.environ.get("GPT4O_KEY", "")
+MODEL_URL: str = os.environ.get("GPT4_URL", "")
+MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
 MONITOR: str = os.environ.get("AZ_CONNECTION_LOG", "")
+COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 
 MODEL_CONFIG = AzureOpenAIModelConfiguration(
-    azure_deployment="gpt-4-essay-evaluation",
-    azure_endpoint=os.getenv("GPT_4_URL", ""),
-    api_version="2023-03-15-preview",
-    api_key=os.getenv("AZURE_OPENAI_API_KEY", "")
+    azure_deployment="tayra-gpt-4o",
+    azure_endpoint=MODEL_URL,
+    api_version="2024-08-01-preview",
+    api_key=MODEL_KEY
 )
 
 
@@ -156,3 +163,34 @@ async def improve_transcription(request: TranscriptionImprovementRequest) -> JSO
     improvement_flow = TranscriptionImprover(model_config=MODEL_CONFIG)
     response = _PFClient().run(flow=improvement_flow, data=request.transcription_data)
     return JSONResponse(response)
+
+
+@app.get("/specialist-evaluation", tags=["Improvement Tasks"])
+async def get_specialist_evaluations(transcription_id: str) -> JSONResponse:
+    """
+    ## Improve the transcription data provided in the request.\n\n
+    **Args**:\n
+        request (TranscriptionImprovementRequest): The request object containing transcription data to be improved.\n\n
+    **Returns**:\n
+        JSONResponse: The response object containing the improved transcription data.
+    """
+    async with CosmosClient(COSMOS_ENDPOINT, DefaultAzureCredential()) as client:
+        try:
+            database = client.get_database_client(os.getenv("DATABASE_NAME", "evaluation_job"))
+            database.read()
+        except exceptions.CosmosResourceNotFoundError:
+            client.create_database(os.getenv("DATABASE_NAME", "evaluation_job"))
+        container = database.get_container_client(os.getenv("CONTAINER_NAME", "evaluations"))
+        query = "SELECT * FROM c"
+        evaluations = [
+            {
+                "transcription_id": item["transcription_id"],
+                "classification": item["evaluation"]["evaluation"]["classification"],
+                "summaryData": item["evaluation"]["evaluation"]["criteria"],
+                "improvementSugestion": item["evaluation"]["evaluation"]["improvement_suggestion"]
+            }
+            async for item in container.query_items(query=query)
+            if item["transcription_id"] == transcription_id
+        ]
+
+    return JSONResponse({"result": evaluations})

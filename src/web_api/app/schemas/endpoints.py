@@ -16,6 +16,7 @@ Methods:
 - None
 """
 
+import uuid
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -94,11 +95,10 @@ class SpecialistInterface(BaseModel):
         transcriptions (int): The number of transcriptions performed by the specialist.
         performance (int): The performance rating of the specialist.
     """
-
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     role: str
-    transcriptions: int
-    performance: int
+    performance: Optional[int] = None
 
 
 class ManagerInterface(BaseModel):
@@ -111,9 +111,22 @@ class ManagerInterface(BaseModel):
         performance (int): The performance rating of the manager.
         specialists (List[SpecialistInterface]): A list of specialist interfaces associated with the manager.
     """
-
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     role: str
-    transcriptions: int
-    performance: int
+    performance:  Optional[int] = None
     specialists: List[SpecialistInterface]
+
+
+class SubCriteria(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    topic: str
+    description: str
+
+
+class Criteria(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    topic: str
+    description: str
+    businessRules: List[str]
+    subCriteria: List[SubCriteria]

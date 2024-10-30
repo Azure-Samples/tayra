@@ -4,6 +4,5 @@ export type Manager = {
   name: string;
   role: string;
   specialists: Specialist[];
-  transcriptions: number;
   performance: number;
 };

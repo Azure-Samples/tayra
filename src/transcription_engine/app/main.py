@@ -128,7 +128,7 @@ async def get_manager_data() -> JSONResponse:
 
 
 @app.get("/transcription-data", tags=["Operational Tasks"])
-async def get_transcription_data(specialist: str) -> JSONResponse:
+async def get_transcription_data(manager: str) -> JSONResponse:
     """
     ## Asynchronously retrieves transcription data for a given specialist.\n\n
     **Args**:\n
@@ -138,7 +138,37 @@ async def get_transcription_data(specialist: str) -> JSONResponse:
     **Raises**:\n
         Exception: If there is an error in loading the data from the database.
     """
-    decoded_specialist = unquote(specialist)
-    data = await database.load_manager_data(manager_name=decoded_specialist)
-    print(decoded_specialist)
+    decoded_manager = unquote(manager)
+    data = await database.load_manager_data(manager_name=decoded_manager)
+    return JSONResponse({"result": data})
+
+
+@app.get("/specialist-data", tags=["Operational Tasks"])
+async def get_specialist_data(specialist: str) -> JSONResponse:
+    """
+    ## Asynchronously retrieves transcription data for a given specialist.\n\n
+    **Args**:\n
+        specialist (str): The name of the specialist, URL-encoded.\n\n
+    **Returns**:\n
+        JSONResponse: A JSON response containing the transcription data.\n\n
+    **Raises**:\n
+        Exception: If there is an error in loading the data from the database.
+    """
+    decoded_id = unquote(specialist)
+    data = await database.load_transcription_data(specialist_id=decoded_id)
+    return JSONResponse({"result": data})
+
+
+@app.get("/transcriptions", tags=["Operational Tasks"])
+async def get_transcriptions() -> JSONResponse:
+    """
+    ## Asynchronously retrieves transcription data for a given specialist.\n\n
+    **Args**:\n
+        specialist (str): The name of the specialist, URL-encoded.\n\n
+    **Returns**:\n
+        JSONResponse: A JSON response containing the transcription data.\n\n
+    **Raises**:\n
+        Exception: If there is an error in loading the data from the database.
+    """
+    data = await database.load_transcriptions()
     return JSONResponse({"result": data})

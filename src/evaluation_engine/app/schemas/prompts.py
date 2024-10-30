@@ -1,5 +1,4 @@
-from typing import Dict, List, TypedDict
-from pydantic import BaseModel
+from typing import Dict, List, Optional, TypedDict
 
 
 TranscriptionEnhancement = TypedDict(
@@ -15,7 +14,7 @@ Criteria = TypedDict(
     {
         "topic": str,
         "business_rules": List[str],
-        "sub_criteria": List[Dict]
+        "sub_criteria": Optional[List[Dict]]
     }
 )
 
@@ -23,15 +22,9 @@ Criteria = TypedDict(
 Transcription = TypedDict(
     "Transcription",
     {
+        "id": str,
         "theme": str,
         "transcription": str,
         "criteria": List[Criteria]
     }
 )
-
-
-class EvaluationJob(BaseModel):
-    destination_container: str
-    theme: str
-    business_rules: List[str]
-    criteria: List[Criteria]

@@ -5,12 +5,15 @@ import logging
 import os
 import sys
 import time
+import uuid
 from logging.handlers import QueueHandler, QueueListener
 from queue import Queue
 from typing import List
 
 import httpx
+from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
+from azure.cosmos import exceptions
 from azure.storage.blob.aio import BlobClient, BlobServiceClient
 from dotenv import find_dotenv, load_dotenv
 
@@ -20,7 +23,7 @@ from app.schemas import TranscriptionJobParams, Transcription, SpecialistItem, M
 
 load_dotenv(find_dotenv())
 logging.getLogger('azure').setLevel(logging.WARNING)
-
+DEFAULT_CREDENTIAL = DefaultAzureCredential()
 
 class BlobTranscriptionProcessor:
     BATCH_SIZE = 50
@@ -53,9 +56,13 @@ class BlobTranscriptionProcessor:
         return listener
 
     async def get_failed_transcriptions(self):
-        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as client:
-            database = client.get_database_client(os.getenv("DATABASE_NAME", "db_transcriptions"))
-            container = database.get_container_client(os.getenv("CONTAINER_NAME", "ManagerData"))
+        async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
+            try:
+                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                await database.read()
+            except exceptions.CosmosResourceNotFoundError:
+                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+            container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             failed_items = container.query_items(
                 query="SELECT * FROM c WHERE c.is_valid_call != 'SIM'",
             )
@@ -79,7 +86,7 @@ class BlobTranscriptionProcessor:
         return [task.result() for task in tasks]
 
     def _set_prefix(self, params: TranscriptionJobParams):
-        prefix = f"{params.origin_container}/"
+        prefix = ""
         if params.manager_name:
             prefix += f"{params.manager_name}/"
             if params.specialist_name:
@@ -93,7 +100,7 @@ class BlobTranscriptionProcessor:
             container_client = blob_service_client.get_container_client(params.origin_container)
 
             batch = []
-            async for blob_page in container_client.list_blobs(results_per_page=results_per_page, name_starts_with=prefix).by_page():
+            async for blob_page in container_client.list_blobs(results_per_page=results_per_page).by_page():
 
                 async for blob in blob_page:
                     if not await self.is_blob_valid(blob, checked_transcriptions_cache, blob_service_client, params):
@@ -235,7 +242,7 @@ class BlobTranscriptionProcessor:
             transcription_text = transcription_result.get("text", "Unable to process :/")
             blob_properties = await blob_client.get_blob_properties()
             transcription_metadata = {
-                "file_name": blob_name,
+                "file_name": str(blob_name).lower().replace(" ", "_"),
                 "file_size": blob_properties.size,
                 "transcription_duration": time.time() - start_transcription,
             }
@@ -244,7 +251,7 @@ class BlobTranscriptionProcessor:
             await self.save_transcription(
                 blob_name,
                 transcription_text,
-                json.dumps(transcription_metadata, ensure_ascii=True),
+                transcription_metadata,
             )
 
             logging.debug("Transcription result for %s: %s", blob_name, transcription_text)
@@ -279,7 +286,7 @@ class BlobTranscriptionProcessor:
     async def transcribe_file(self, blob_client, file_name: str, file_data: io.BytesIO, sem: int = 20):
         file_content = (file_name, file_data.read())
         url = os.getenv("AI_SPEECH_URL", "")
-        payload = {"definition": '{"locales":["pt-BR"], "profanityFilterMode": "None"}'}
+        payload = {"definition": "{\"locales\": [\"pt-BR\"], \"profanityFilterMode\": \"None\", \"channels\":[0,1]}"}
         files = [("audio", file_content)]
         headers = {"Ocp-Apim-Subscription-Key": self.ai_speech_key, "Accept": "application/json"}
 
@@ -328,7 +335,7 @@ class BlobTranscriptionProcessor:
         transcription_file_name = str(os.path.splitext(blob_name)[0]).split("/")
 
         transcription = Transcription(
-            id=str(time.time()),
+            id=str(uuid.uuid4()),
             filename=blob_name,
             transcription=transcription_text,
             metadata=transcription_metadata,
@@ -336,26 +343,31 @@ class BlobTranscriptionProcessor:
         )
 
         specialist = SpecialistItem(
-            name=str(transcription_file_name[2]).upper(),
+            id=str(uuid.uuid4()),
+            name=str(transcription_file_name[1]).upper(),
             transcriptions = [transcription]
         )
 
         manager = ManagerModel(
-            name=str(transcription_file_name[1]).upper(),
+            id=str(uuid.uuid4()),
+            name=str(transcription_file_name[0]).upper(),
             assistants=[specialist]
         )
 
-        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as cosmos_client:
-            database = cosmos_client.get_database_client(os.getenv("DATABASE_NAME", "ManagerData"))
-            container = database.get_container_client(os.getenv("CONTAINER_NAME", "Managers"))
+        async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
+            try:
+                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                await database.read()
+            except exceptions.CosmosResourceNotFoundError:
+                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+            container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             manager_items = container.query_items(
-                query=f"SELECT * FROM c WHERE c.name = '{manager.name}'",
-                enable_cross_partition_query=True
+                query=f"SELECT * FROM c WHERE c.name = '{manager.name}'"
             )
-            manager_item = [item async for item in manager_items][0] if manager_items else None
+            manager_item = [item async for item in manager_items] if manager_items else None
 
             if manager_item:
-                manager = ManagerModel(**manager_item)
+                manager = ManagerModel(**manager_item[0])
                 specialist_found = False
                 for existing_specialist in manager.assistants:
                     if existing_specialist.name == specialist.name:
@@ -364,6 +376,8 @@ class BlobTranscriptionProcessor:
                         break
                 if not specialist_found:
                     manager.assistants.append(specialist)
-            await container.upsert_item(manager.model_dump())
+                await container.upsert_item(manager.model_dump())
+            else:
+                await container.create_item(manager.model_dump())
 
         logging.info("Transcription saved at: %s", transcription.id)

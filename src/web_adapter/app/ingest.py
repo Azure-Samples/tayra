@@ -37,11 +37,7 @@ load_dotenv(find_dotenv())
 
 BLOB_CONN = os.getenv("BLOB_CONNECTION_STRING", "")
 BLOB_CONTAINER = os.getenv("BLOB_STORAGE_CONTAINER", "")
-AI_STUDIO_KEY = os.getenv("AI_STUDIO_KEY", "")
-COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
-COSMOS_KEY = os.getenv("COSMOS_KEY", "")
 
-# Set up logging
 logger = logging.getLogger("azure")
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -69,12 +65,12 @@ async def upload_file_to_blob(
     try:
         file_name = "".join(c for c in file_name if c.isalnum() or c == ".")
         async with BlobServiceClient.from_connection_string(BLOB_CONN) as blob_service_client:
-            blob_path = f"audiofiles/{manager_name}/{specialist_name}/{file_name}"
+            blob_path = f"{manager_name}/{specialist_name}/{file_name}"
             blob_client = blob_service_client.get_blob_client(
                 container=container_name, blob=blob_path
             )
 
-            blob_client.upload_blob(file_content.getvalue())
+            await blob_client.upload_blob(file_content.getvalue())
             logger.info("Successfully uploaded file: %s", blob_path)
 
     except Exception as e:
@@ -82,7 +78,12 @@ async def upload_file_to_blob(
         raise e
 
 
-def process_file(container_name: str, file_address: str) -> str:
+def process_file(
+        container_name: str,
+        file_address: str,
+        manager: str,
+        specialist: str
+    ) -> str:
     """
     Process a file and upload its content to a document engine.
 
@@ -104,10 +105,9 @@ def process_file(container_name: str, file_address: str) -> str:
         with open(file_address, "rb") as file_content:
             buffer = io.BytesIO(file_content.read())
 
-        file_data = file_address.split(os.sep)
         file_name = os.path.basename(file_address)
-        specialist_name = file_data[-2]
-        manager_name = file_data[-3]
+        specialist_name = specialist
+        manager_name = manager
 
         asyncio.run(
             upload_file_to_blob(
@@ -132,7 +132,12 @@ def process_file(container_name: str, file_address: str) -> str:
         return f"Error processing file {file_address}: {str(e)}"
 
 
-def process_multiple_files(container_name: str, file_address: str) -> str:
+def process_multiple_files(
+        container_name: str,
+        file_address: str,
+        manager: str,
+        specialist: str
+    ) -> str:
     """
     Process multiple files in a folder concurrently.
 
@@ -151,7 +156,7 @@ def process_multiple_files(container_name: str, file_address: str) -> str:
     results = []
     with ProcessPoolExecutor() as executor:
         futures = {
-            executor.submit(process_file, container_name, file_name): file_name
+            executor.submit(process_file, container_name, file_name, manager, specialist): file_name
             for file_name in file_names
         }
         for future in as_completed(futures):
@@ -166,7 +171,7 @@ def process_multiple_files(container_name: str, file_address: str) -> str:
     return "\n".join(results)
 
 
-def upload_job(container_name: str, file_address: str) -> str:
+def upload_job(container_name: str, file_address: str, manager: str, specialist: str) -> str:
     """
     Uploads a file or a folder to the ingestion engine for processing.
 
@@ -200,13 +205,28 @@ def upload_job(container_name: str, file_address: str) -> str:
     try:
         match upload_type:
             case "file":
-                return process_file(container_name=container_name, file_address=file_address)
+                return process_file(
+                    container_name=container_name,
+                    file_address=file_address,
+                    manager=manager,
+                    specialist=specialist
+                )
             case "folder":
-                return process_multiple_files(container_name, file_address)
+                return process_multiple_files(
+                    container_name,
+                    file_address,
+                    manager=manager,
+                    specialist=specialist
+                )
             case "zip":
                 with zipfile.ZipFile(file_address, "r") as zip_ref:
                     zip_ref.extractall("/tmp/extracted_files")
-                return process_multiple_files(container_name, "/tmp/extracted_files")
+                return process_multiple_files(
+                    container_name,
+                    "/tmp/extracted_files",
+                    manager=manager,
+                    specialist=specialist
+                )
             case _:
                 return "Invalid upload type."
     except Exception as e:
