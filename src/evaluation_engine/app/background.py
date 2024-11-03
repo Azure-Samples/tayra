@@ -2,19 +2,21 @@
 _summary_
 """
 
+import logging
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
-from promptflow.core import AzureOpenAIModelConfiguration
 
 from app.schemas import EvaluationEndpoint, TranscriptionInterface, Transcription
 from app.evaluate import EvaluateTranscription
 
 
+logger = logging.getLogger(__name__)
+
+
 def evaluation_job(
         transcription_interface: TranscriptionInterface,
         theme: str,
-        criteria: List,
-        model_config: AzureOpenAIModelConfiguration
+        criteria: List
     ):
     transcription = Transcription(
         id=transcription_interface.id,
@@ -22,14 +24,11 @@ def evaluation_job(
         criteria=criteria,
         theme=theme
     )
-    evaluation_flow = EvaluateTranscription(model_config=model_config)
+    evaluation_flow = EvaluateTranscription()
     return evaluation_flow(transcription)
 
 
-def run_evaluation_job(
-    parameters: EvaluationEndpoint,
-    model_config: AzureOpenAIModelConfiguration
-) -> List:
+def run_evaluation_job(parameters: EvaluationEndpoint) -> None:
 
     with ThreadPoolExecutor() as executor:
 
@@ -38,12 +37,10 @@ def run_evaluation_job(
                 evaluation_job,
                 transcription,
                 parameters.criteria,
-                parameters.theme,
-                model_config
+                parameters.theme
             )
             for transcription in parameters.transcriptions
         ]
 
         response = [task.result() for task in tasks]
-        
-    return response
+    logger.info(response)

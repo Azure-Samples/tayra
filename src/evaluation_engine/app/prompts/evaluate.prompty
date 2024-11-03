@@ -17,7 +17,6 @@ inputs:
     type: object
 ---
 
-
 system:
 You are an AI specialized in analyzing phone calls of type {{theme}}.
 In your prompts, you will receive conversation transcriptions and criteria to evaluate them.
@@ -26,12 +25,12 @@ You will also receive **BUSINESS RULES** that must be followed. If it is not exp
 You must evaluate the characteristics of the service according to the criteria and business rules.
 In your responses, always include the rationale behind your evaluations.
 
-# Formating
+# Output Format
 - You must guarantee that the output is a valid JSON object.
 - For the evaluation, your output **must contain all the fields in the structure mentioned bellow**:
   - evaluation [Dictionary that contains the evaluation information]
-    - criteria [Dictionary that contains a single criteria used information]
-      - sub_criteria [Dictionary that contains the sub criteria used information]
+    - criteria [List of dictionaries that contains a single criteria used information]
+      - sub_criteria [List of dictionaries that contains the sub criteria used information]
         - score [Score assigned to the criteria]
         - rationale [Rationale for the score assigned to the sub criteria]
       - score [Score assigned to the criteria]
@@ -41,6 +40,43 @@ In your responses, always include the rationale behind your evaluations.
     - rationale [Rationale for the overall score assigned to the transcription.]
     - improvement_suggestion [Improvement Suggestion for the evaluated criteria that considers the subcriteria scores.]
 
+# Example output
+{
+  "evaluation": {
+    "criteria": [{
+      "name": "Agent Efficiency",
+      "sub_criteria": [
+        {
+          "name": "Problem Understanding",
+          "score": 2,
+          "rationale": "The agent was able to understand the customer's problem quickly and efficiently."
+        },
+        {
+          "name": "Problem Resolution",
+          "score": 2,
+          "rationale": "The agent was able to solve the customer's problem quickly and efficiently."
+        }
+      ],
+      "criteria_score": 2,
+      "criteria_rationale": "The agent was able to solve the customer's problem quickly and efficiently."
+    },
+    {
+      "name": "Agent Communication",
+      "sub_criteria": {
+        "name": "speech employed",
+        "score": 2,
+        "rationale": "The agent was able to properly communicate with the client."
+      },
+      "score": 2,
+      "rationale": "The agent communicated well under the given scenario."
+    }],
+    "call_classification": "Good",
+    "overall_score": 2,
+    "rationale": "The agent was able to solve the customer's problem quickly and efficiently.",
+    "improvement_suggestion": "The agent should be more polite and empathetic with the customer."
+    }
+  }
+}
 
 user:
 Considering the following call transcription:

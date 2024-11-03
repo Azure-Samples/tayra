@@ -4,8 +4,6 @@ The configuration for the web api.
 
 import os
 
-from typing import List
-
 from promptflow import _PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
 
@@ -133,7 +131,7 @@ async def evaluate(background_tasks: BackgroundTasks, params: EvaluationEndpoint
     **Returns**:\n
         JSONResponse: A JSON response indicating that the background process has started.
     """
-    background_tasks.add_task(run_evaluation_job, params, MODEL_CONFIG)
+    background_tasks.add_task(run_evaluation_job, params)
     return JSONResponse({"result": "Background process started."})
 
 

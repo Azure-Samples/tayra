@@ -12,10 +12,7 @@ from dotenv import find_dotenv, load_dotenv
 from promptflow.core import Prompty, AzureOpenAIModelConfiguration
 from promptflow.tracing import trace
 
-from app.schemas import (
-    HumanEvaluation,
-    Transcription
-)
+from app.schemas import HumanEvaluation, Transcription
 
 
 load_dotenv(find_dotenv())
@@ -23,8 +20,17 @@ load_dotenv(find_dotenv())
 DEFAULT_CREDENTIAL = DefaultAzureCredential()
 GPT4_KEY = os.getenv("GPT4O_KEY", "")
 GPT4_URL = os.getenv("GPT4O_URL", "")
+MODEL_URL: str = os.environ.get("GPT4_URL", "")
+MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MODEL_CONFIG = AzureOpenAIModelConfiguration(
+    azure_deployment="tayra-gpt-4o",
+    azure_endpoint=MODEL_URL,
+    api_version="2024-08-01-preview",
+    api_key=MODEL_KEY
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -35,7 +41,7 @@ class EvaluateTranscription:
 
     def __init__(
             self,
-            model_config: AzureOpenAIModelConfiguration
+            model_config: AzureOpenAIModelConfiguration = MODEL_CONFIG
         ):
         self.model_config = model_config
 
@@ -44,11 +50,17 @@ class EvaluateTranscription:
         start_time = time.time()
         with CosmosClient(COSMOS_ENDPOINT, DEFAULT_CREDENTIAL) as client:
             try:
-                database = client.get_database_client(os.getenv("DATABASE_NAME", "evaluation_job"))
+                database = client.get_database_client(
+                    os.getenv("DATABASE_NAME", "evaluation_job")
+                )
                 database.read()
             except exceptions.CosmosResourceNotFoundError:
-                client.create_database(os.getenv("DATABASE_NAME", "evaluation_job"))
-            container = database.get_container_client(os.getenv("CONTAINER_NAME", "evaluations"))
+                client.create_database(
+                    os.getenv("DATABASE_NAME", "evaluation_job")
+                )
+            container = database.get_container_client(
+                os.getenv("CONTAINER_NAME", "evaluations")
+            )
             evaluation = self.process_document(transcription)
             evaluation["transcription_id"] = transcription["id"]
             container.upsert_item(evaluation)
@@ -57,7 +69,6 @@ class EvaluateTranscription:
         return evaluation
 
     def process_document(self, transcription: Transcription):
-
         evaluation = self.evaluate(transcription)
 
         metadata = {
@@ -71,6 +82,7 @@ class EvaluateTranscription:
             "evaluation": evaluation,
             "metadata": metadata
         }
+
         return output_doc
 
     @trace
