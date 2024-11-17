@@ -12,7 +12,6 @@ import os
 import sys
 from typing import Dict, List
 
-from azure.core import exceptions as azure_exceptions
 from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
