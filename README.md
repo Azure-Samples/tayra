@@ -39,7 +39,7 @@ Tayra can be tailored to various business scenarios, providing value in key area
 
 Tayra offers the following features:
 
-1. **Call Center Software**: Capture live calls and store audio files in Azure Data Lake for processing.
+1. **Call Center Software Integration**: Capture live calls and store audio files in Azure Data Lake for processing.
 2. **Web Adapter**: A Python-based API that retrieves audio files and forwards them to the Transcription Engine.
 3. **Transcription Engine**: Uses Azure Cognitive Services to transcribe audio files into text, stored in Azure Cosmos DB.
 
