@@ -39,13 +39,13 @@ Tayra can be tailored to various business scenarios, providing value in key area
 
 Tayra offers the following features:
 
-1. **Audio Response Units**: Capture live calls and store audio files in Azure Data Lake for processing.
+1. **Call Center Software**: Capture live calls and store audio files in Azure Data Lake for processing.
 2. **Web Adapter**: A Python-based API that retrieves audio files and forwards them to the Transcription Engine.
 3. **Transcription Engine**: Uses Azure Cognitive Services to transcribe audio files into text, stored in Azure Cosmos DB.
 
 ### Evaluation Engine
 
-4. **Controller Engine (Python)**: Runs Python scripts to evaluate transcriptions based on business rules, using logic-based scoring or machine learning models.
+4. **Orchestrator**: Runs Python scripts to evaluate transcriptions based on business rules, using logic-based scoring or machine learning models.
 5. **AI-driven Evaluation Engine** (Azure OpenAI & PromptFlow): Uses large language models to analyze sentiment, detect compliance violations, and identify improvement areas.
 
 ### Context and Memory Storage
@@ -53,7 +53,7 @@ Tayra offers the following features:
 6. **Context Storage (Azure Cosmos DB)**: Stores configuration settings, business rules, and contextual data for evaluations.
 7. **Memory Storage (Azure AI Search)**: Stores vectorized represenations of transcriptions for fast retrieval and matching.
 8. **Management Interface**: An Azure Static Web App using NestJS and React, allowing users to configure rules, monitor processes, and review results.
-9. **Balance and Load Management**: Uses Azure API Management and load balancers to handle large workloads and manage resources during high-traffic periods.
+9. **Balancer and API Management**: Uses Azure API Management and load balancers to handle large workloads and manage resources during high-traffic periods.
 
 ## Getting Started
 
