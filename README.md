@@ -1,6 +1,6 @@
 # Tayra - Call Center Analytics GenAI App
 
-![Tayra Logo](/images/tayra-logo.jpg)
+<img src="/images/tayra-logo.jpg" alt="Tayra Logo" width="30%">
 
 Tayra is an advanced call center analytics platform that evaluates and scores call center audio interactions. By converting audio files into transcriptions and applying various evaluation models, Tayra helps organizations measure performance, compliance, and customer satisfaction efficiently. It uses Python-based engines for flexibility and integration with machine learning frameworks, making it adaptable for custom evaluations.
 
@@ -33,7 +33,7 @@ Tayra can be tailored to various business scenarios, providing value in key area
 
 ## Architecture
 
-![Tayra Architecture](/images/Tayra-CallCenterAnalytics-C4.png)
+<img src="/images/Tayra-CallCenterAnalytics-C4.png" alt="Tayra Architecture" width="70%">
 
 ## Features
 
