@@ -33,7 +33,7 @@ Tayra can be tailored to various business scenarios, providing value in key area
 
 ## Architecture
 
-<img src="/images/Tayra-CallCenterAnalytics-C4.png" alt="Tayra Architecture" width="80%">
+<img src="/images/Tayra-CallCenterAnalytics-C4.png" alt="Tayra Architecture" width="100%">
 
 ## Features
 
