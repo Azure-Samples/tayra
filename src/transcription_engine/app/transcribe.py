@@ -29,8 +29,7 @@ class BlobTranscriptionProcessor:
     BATCH_SIZE = 50
 
     def __init__(self):
-        self.blob_conn = os.getenv("BLOB_CONNECTION_STRING", "")
-        self.sas_token = os.getenv("BLOB_SERVICE_CLIENT", "")
+        self.storage_account_name = os.getenv("STORAGE_ACCOUNT_NAME", "")
         self.ai_speech_key = os.getenv("AI_SPEECH_KEY", "")
         self.cosmos_endpoint = os.getenv("COSMOS_ENDPOINT", "")
         self.cosmos_key = os.getenv("COSMOS_KEY", "")
@@ -58,10 +57,10 @@ class BlobTranscriptionProcessor:
     async def get_failed_transcriptions(self):
         async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
             try:
-                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
             except exceptions.CosmosResourceNotFoundError:
-                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+                await client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
             container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             failed_items = container.query_items(
                 query="SELECT * FROM c WHERE c.is_valid_call != 'SIM'",
@@ -96,7 +95,8 @@ class BlobTranscriptionProcessor:
     async def _process_batch(self, prefix, checked_transcriptions_cache, results_per_page, params: TranscriptionJobParams):
         counter = 0
         transcription_metadata = []
-        async with BlobServiceClient.from_connection_string(self.blob_conn) as blob_service_client:
+        async with BlobServiceClient(account_url=f"https://{self.storage_account_name}.blob.core.windows.net", 
+                                     credential=DEFAULT_CREDENTIAL) as blob_service_client:
             container_client = blob_service_client.get_container_client(params.origin_container)
 
             batch = []
@@ -166,9 +166,10 @@ class BlobTranscriptionProcessor:
         metadata_json = json.dumps(metadata, ensure_ascii=True)
         output_file = f"metadata-{str(time.time())}.json"
 
-        async with BlobServiceClient.from_connection_string(self.blob_conn) as blob_service_client:
+        async with BlobServiceClient(account_url=f"https://{self.storage_account_name}.blob.core.windows.net", 
+                                     credential=DEFAULT_CREDENTIAL) as blob_service_client:
             metadata_blob_client = blob_service_client.get_blob_client(
-                container=params.origin_container, blob=output_file
+            container=params.origin_container, blob=output_file
             )
 
             await metadata_blob_client.upload_blob(metadata_json, overwrite=True)
@@ -356,10 +357,10 @@ class BlobTranscriptionProcessor:
 
         async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
             try:
-                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
             except exceptions.CosmosResourceNotFoundError:
-                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+                await client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
             container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             manager_items = container.query_items(
                 query=f"SELECT * FROM c WHERE c.name = '{manager.name}'"

@@ -13,7 +13,8 @@ Functions:
         Determines the type of file address (file, folder, or zip) and processes accordingly.
 
 Usage:
-    Set the environment variables BLOB_CONNECTION_STRING, BLOB_STORAGE_CONTAINER, and BLOB_ROOT_FOLDER
+    Set the environment variables STORAGE_ACCOUNT_NAME. 
+    The DefaultAzureCredential will be used for authentication.
     to the appropriate values for Azure Blob Storage.
 
     Call the main() function to start the upload job.
@@ -32,11 +33,12 @@ from azure.storage.blob.aio import BlobServiceClient
 
 # Load environment variables
 from dotenv import find_dotenv, load_dotenv
+from azure.identity.aio import DefaultAzureCredential
 
 load_dotenv(find_dotenv())
 
-BLOB_CONN = os.getenv("BLOB_CONNECTION_STRING", "")
-BLOB_CONTAINER = os.getenv("BLOB_STORAGE_CONTAINER", "")
+STORAGE_ACCOUNT_NAME: str = os.getenv("STORAGE_ACCOUNT_NAME", "")
+DEFAULT_CREDENTIALS = DefaultAzureCredential()
 
 logger = logging.getLogger("azure")
 logger.setLevel(logging.INFO)
@@ -64,7 +66,7 @@ async def upload_file_to_blob(
     """
     try:
         file_name = "".join(c for c in file_name if c.isalnum() or c == ".")
-        async with BlobServiceClient.from_connection_string(BLOB_CONN) as blob_service_client:
+        async with BlobServiceClient(account_url=f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net", credential=DEFAULT_CREDENTIALS) as blob_service_client:
             blob_path = f"{manager_name}/{specialist_name}/{file_name}"
             blob_client = blob_service_client.get_blob_client(
                 container=container_name, blob=blob_path
