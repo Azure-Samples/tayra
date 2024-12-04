@@ -1,6 +1,6 @@
 # Tayra - Call Center Analytics GenAI App
 
-<img src="/images/tayra-logo.jpg" alt="Tayra Logo" width="30%">
+<img src="images/tayra-logo.jpg" alt="Tayra Logo" width="30%">
 
 Tayra is an advanced call center analytics platform that evaluates and scores call center audio interactions. By converting audio files into transcriptions and applying various evaluation models, Tayra helps organizations measure performance, compliance, and customer satisfaction efficiently. It uses Python-based engines for flexibility and integration with machine learning frameworks, making it adaptable for custom evaluations.
 
@@ -33,7 +33,7 @@ Tayra can be tailored to various business scenarios, providing value in key area
 
 ## Architecture
 
-<img src="/images/Tayra-CallCenterAnalytics-C4.png" alt="Tayra Architecture" width="100%">
+<img src="images/Tayra-CallCenterAnalytics-C4.png" alt="Tayra Architecture" width="100%">
 
 ## Features
 
@@ -59,22 +59,36 @@ Tayra offers the following features:
 
 ### Prerequisites
 
-- Windows, Linux, or MacOS
+- Windows, Linux and MacOS
 - Python 3.12
 - Typescript 14
+- [Az CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt)
+- [npm 8.5.1](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [Poetry 1.8.4 or greater](https://python-poetry.org/docs/#installing-with-the-official-installer)
+- [Yarn 1.22 or greater](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable)
+- [NVM 0.40.1 or greater](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
+
 
 ### Installation
 
-Install frontend and services easily:
+Install dependencies for backend and frontend
 
-- `npm install [package name]`
+- `npm install frontend`
 - `poetry install`
+- `yarn install`
+
+* In some case you may need to use the NodeJS version 18:
+
+- `nvm install 18` and `nvm use 18`
 
 ### Quickstart
 
-1. `git clone [repository clone url]`
-2. `cd [repository name]`
-3. ...
+1. `git clone https://github.com/Azure-Samples/tayra.git`
+2. `bash run.sh` (for Linux users) or `run.ps1` (for Windows users)
+
+The run script with run four microservices (Evaluation, Transcription, Web Adapter and Web APIs) as well as the frontend application.
+
+
 
 ## Demo
 
@@ -86,8 +100,33 @@ To run the demo, follow these steps:
 2.
 3.
 
+## CosmosDB EntraID permissions
+We use the [CosmosDB native RBAC](https://aka.ms/cosmos-native-rbac) to authenticate with the application. Follow the instructions below to give the permission to the user/service-principal:
+
+1. `az login`
+2. Add the CosmosDB SQL Data Contributor assigment:
+
+```bash
+resourceGroupName='<myResourceGroup>'
+accountName='<myCosmosAccount>'
+readOnlyRoleDefinitionId='00000000-0000-0000-0000-000000000001' 
+
+# For Service Principals make sure to use the Object ID as found in the Enterprise applications section of the Azure Active Directory portal blade.
+principalId='<aadPrincipalId>'
+
+az cosmosdb sql role assignment create --account-name $accountName --resource-group $resourceGroupName --scope "/" --principal-id $principalId --role-definition-id $readOnlyRoleDefinitionId 
+```
+
 ## Resources
 
-- Link to supporting information
-- Link to similar sample
-- ...
+- [Azure OpenAI Service](https://azure.microsoft.com/en-us/services/openai-service/)
+- [Azure Speech Services](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/overview)
+- [Azure Cosmos DB](https://azure.microsoft.com/en-us/services/cosmos-db/)
+- [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview)
+
+## TO-DO
+- Prepare sample audio data
+- Prepare the demo step-by-step guidance
+- Add PowerBI dashboard template with analytics
+- Add language selection option
+- Add transcription service options (currently only Fast Transcription API is used)
