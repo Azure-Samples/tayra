@@ -25,6 +25,7 @@ load_dotenv(find_dotenv())
 
 COSMOS_ENDPOINT: str = os.getenv("COSMOS_ENDPOINT", "")
 COSMOS_KEY: str = os.getenv("COSMOS_KEY", "")
+COSMOS_DB_MANAGER_RULES: str = os.getenv("COSMOS_DB_MANAGER_RULES", "")
 DEFAULT_CREDENTIALS = DefaultAzureCredential()
 
 
@@ -102,10 +103,10 @@ async def upsert_manager(manager_data: ManagerInterface) -> JSONResponse:
     """
     async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
         try:
-            database = cosmos_client.get_database_client("web-api")
+            database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
         except exceptions.CosmosResourceNotFoundError:
-            await cosmos_client.create_database("web-api")
+            await cosmos_client.create_database(COSMOS_DB_MANAGER_RULES)
 
         container = database.get_container_client("managers")
         await container.read()
@@ -133,10 +134,10 @@ async def upsert_rule(rule_data: Criteria) -> JSONResponse:
     """
     async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
         try:
-            database = cosmos_client.get_database_client("web-api")
+            database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
         except exceptions.CosmosResourceNotFoundError:
-            await cosmos_client.create_database("web-api")
+            await cosmos_client.create_database(COSMOS_DB_MANAGER_RULES)
 
         container = database.get_container_client("rules")
         await container.read()
@@ -165,10 +166,10 @@ async def managers_names() -> JSONResponse:
     """
     async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
         try:
-            database = cosmos_client.get_database_client("web-api")
+            database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
         except exceptions.CosmosResourceNotFoundError:
-            await cosmos_client.create_database("web-api")
+            await cosmos_client.create_database(COSMOS_DB_MANAGER_RULES)
         container = database.get_container_client("managers")
 
         query = "SELECT c.name, c.specialists FROM c"
@@ -203,10 +204,10 @@ async def list_rules() -> JSONResponse:
     """
     async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
         try:
-            database = cosmos_client.get_database_client("web-api")
+            database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
         except exceptions.CosmosResourceNotFoundError:
-            await cosmos_client.create_database("web-api")
+            await cosmos_client.create_database(COSMOS_DB_MANAGER_RULES)
         container = database.get_container_client("rules")
 
         query = "SELECT * FROM c"

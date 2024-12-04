@@ -18,15 +18,14 @@ from app.schemas import HumanEvaluation, Transcription
 load_dotenv(find_dotenv())
 
 DEFAULT_CREDENTIAL = DefaultAzureCredential()
-GPT4_KEY = os.getenv("GPT4O_KEY", "")
-GPT4_URL = os.getenv("GPT4O_URL", "")
 MODEL_URL: str = os.environ.get("GPT4_URL", "")
 MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
+MODEL_NAME: str = os.environ.get("GPT4_NAME", "")
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_CONFIG = AzureOpenAIModelConfiguration(
-    azure_deployment="tayra-gpt-4o",
+    azure_deployment=MODEL_NAME,
     azure_endpoint=MODEL_URL,
     api_version="2024-08-01-preview",
     api_key=MODEL_KEY
@@ -51,12 +50,12 @@ class EvaluateTranscription:
         with CosmosClient(COSMOS_ENDPOINT, DEFAULT_CREDENTIAL) as client:
             try:
                 database = client.get_database_client(
-                    os.getenv("DATABASE_NAME", "evaluation_job")
+                    os.getenv("COSMOS_DB_EVALUATION", "evaluation_job")
                 )
                 database.read()
             except exceptions.CosmosResourceNotFoundError:
                 client.create_database(
-                    os.getenv("DATABASE_NAME", "evaluation_job")
+                    os.getenv("COSMOS_DB_EVALUATION", "evaluation_job")
                 )
             container = database.get_container_client(
                 os.getenv("CONTAINER_NAME", "evaluations")
@@ -106,10 +105,10 @@ def set_human_evaluation(transcription_id: str, evaluation: HumanEvaluation):
     evaluation_data["evaluation_date"] = datetime.datetime.today()
     with CosmosClient(COSMOS_ENDPOINT, DEFAULT_CREDENTIAL) as client:
         try:
-            database = client.get_database_client(os.getenv("DATABASE_NAME", "evaluation_job"))
+            database = client.get_database_client(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
             database.read()
         except exceptions.CosmosResourceNotFoundError:
-            client.create_database(os.getenv("DATABASE_NAME", "evaluation_job"))
+            client.create_database(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
         container = database.get_container_client(os.getenv("HUMAN_CONTAINER_NAME", "humanEvaluations"))
         query = f"SELECT * FROM c WHERE c.transcription_id = {transcription_id}"
         parameters = [{"name": "@transcription_id", "value": transcription_id}]
