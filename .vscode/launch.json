@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: Evaluation FastAPI",
+      "name": "Evaluation",
       "type": "debugpy",
       "cwd": "${workspaceFolder}\\src\\evaluation_engine",
       "request": "launch",
@@ -15,7 +15,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Transcription FastAPI",
+      "name": "Transcription",
       "type": "debugpy",
       "cwd": "${workspaceFolder}\\src\\transcription_engine",
       "request": "launch",
@@ -28,7 +28,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web Adapter FastAPI",
+      "name": "Web Adapter",
       "type": "debugpy",
       "cwd": "${workspaceFolder}\\src\\web_adapter",
       "request": "launch",
@@ -41,7 +41,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web API FastAPI",
+      "name": "Web API",
       "type": "debugpy",
       "cwd": "${workspaceFolder}\\src\\web_api",
       "request": "launch",

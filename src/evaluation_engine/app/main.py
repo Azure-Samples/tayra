@@ -4,7 +4,7 @@ The configuration for the web api.
 
 import os
 
-from promptflow import _PFClient
+from promptflow.client import PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
 
 from azure.identity.aio import DefaultAzureCredential
@@ -159,7 +159,7 @@ async def improve_transcription(request: TranscriptionImprovementRequest) -> JSO
         JSONResponse: The response object containing the improved transcription data.
     """
     improvement_flow = TranscriptionImprover(model_config=MODEL_CONFIG)
-    response = _PFClient().run(flow=improvement_flow, data=request.transcription_data)
+    response = PFClient().run(flow=improvement_flow, data=request.transcription_data)
     return JSONResponse(response)
 
 
