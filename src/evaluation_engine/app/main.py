@@ -4,7 +4,7 @@ The configuration for the web api.
 
 import os
 
-from promptflow import _PFClient
+from promptflow.client import PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
 
 from azure.identity.aio import DefaultAzureCredential
@@ -159,7 +159,7 @@ async def improve_transcription(request: TranscriptionImprovementRequest) -> JSO
         JSONResponse: The response object containing the improved transcription data.
     """
     improvement_flow = TranscriptionImprover(model_config=MODEL_CONFIG)
-    response = _PFClient().run(flow=improvement_flow, data=request.transcription_data)
+    response = PFClient().run(flow=improvement_flow, data=request.transcription_data)
     return JSONResponse(response)
 
 
@@ -179,16 +179,14 @@ async def get_specialist_evaluations(transcription_id: str) -> JSONResponse:
         except exceptions.CosmosResourceNotFoundError:
             client.create_database(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
         container = database.get_container_client(os.getenv("CONTAINER_NAME", "evaluations"))
-        query = "SELECT * FROM c"
+        query = "SELECT * FROM c WHERE c.transcription_id = @transcription_id"
         evaluations = [
-            {
-                "transcription_id": item["transcription_id"],
-                "classification": item["evaluation"]["evaluation"]["classification"],
-                "summaryData": item["evaluation"]["evaluation"]["criteria"],
-                "improvementSugestion": item["evaluation"]["evaluation"]["improvement_suggestion"]
-            }
-            async for item in container.query_items(query=query)
-            if item["transcription_id"] == transcription_id
+            item
+            async for item
+            in container.query_items(
+                query=query,
+                parameters=[{"name": "@transcription_id", "value": transcription_id}]
+            )
         ]
-
+    print(evaluations)
     return JSONResponse({"result": evaluations})
