@@ -174,10 +174,10 @@ async def get_specialist_evaluations(transcription_id: str) -> JSONResponse:
     """
     async with CosmosClient(COSMOS_ENDPOINT, DefaultAzureCredential()) as client:
         try:
-            database = client.get_database_client(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
+            database = client.get_database_client(os.getenv("DATABASE_NAME", "evaluation_job"))
             database.read()
         except exceptions.CosmosResourceNotFoundError:
-            client.create_database(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
+            client.create_database(os.getenv("DATABASE_NAME", "evaluation_job"))
         container = database.get_container_client(os.getenv("CONTAINER_NAME", "evaluations"))
         query = "SELECT * FROM c WHERE c.transcription_id = @transcription_id"
         evaluations = [
