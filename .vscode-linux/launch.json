@@ -13,7 +13,7 @@
       }
     },
     {
-      "name": "Python Debugger: Evaluation FastAPI",
+      "name": "Evaluation",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/evaluation_engine",
       "request": "launch",
@@ -26,7 +26,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Transcription FastAPI",
+      "name": "Transcription",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/transcription_engine",
       "request": "launch",
@@ -39,7 +39,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web Adapter FastAPI",
+      "name": "Web Adapter",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/web_adapter",
       "request": "launch",
@@ -52,7 +52,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web API FastAPI",
+      "name": "Web API",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/web_api",
       "request": "launch",
@@ -65,24 +65,12 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Python File",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${file}"
-    },
-    {
-      "name": "Next.js: debug server-side",
+      "name": "React Server",
       "type": "node-terminal",
       "request": "launch",
       "command": "yarn dev",
       "cwd": "${workspaceFolder}/src/frontend",
       "sourceMaps": true
-    },
-    {
-      "name": "Next.js: debug client-side",
-      "type": "msedge",
-      "request": "launch",
-      "url": "http://localhost:3006"
-    },
+    }
   ]
 }
