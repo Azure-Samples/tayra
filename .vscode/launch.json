@@ -4,11 +4,11 @@
     {
       "name": "Evaluation",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}\\src\\evaluation_engine",
+      "cwd": "${workspaceFolder}/src/evaluation_engine",
       "request": "launch",
       "module": "uvicorn",
       "env": {
-        "Path": "${env:Path};${workspaceFolder}\\src"
+        "Path": "${env:Path};${workspaceFolder}"
       },
       "args": ["app.main:app", "--reload", "--port", "8084"],
       "jinja": true,
@@ -17,11 +17,11 @@
     {
       "name": "Transcription",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}\\src\\transcription_engine",
+      "cwd": "${workspaceFolder}/src/transcription_engine",
       "request": "launch",
       "module": "uvicorn",
       "env": {
-        "Path": "${env:Path};${workspaceFolder}\\src"
+        "Path": "${env:Path};${workspaceFolder}"
       },
       "args": ["app.main:app", "--reload", "--port", "8083"],
       "jinja": true,
@@ -30,11 +30,11 @@
     {
       "name": "Web Adapter",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}\\src\\web_adapter",
+      "cwd": "${workspaceFolder}/src/web_adapter",
       "request": "launch",
       "module": "uvicorn",
       "env": {
-        "Path": "${env:Path};${workspaceFolder}\\src"
+        "Path": "${env:Path};${workspaceFolder}"
       },
       "args": ["app.main:app", "--reload", "--port", "8082"],
       "jinja": true,
@@ -43,11 +43,11 @@
     {
       "name": "Web API",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}\\src\\web_api",
+      "cwd": "${workspaceFolder}/src/web_api",
       "request": "launch",
       "module": "uvicorn",
       "env": {
-        "Path": "${env:Path};${workspaceFolder}\\src"
+        "Path": "${env:Path};${workspaceFolder}"
       },
       "args": ["app.main:app", "--reload", "--port", "8081"],
       "jinja": true,

@@ -19,7 +19,7 @@ from azure.cosmos import exceptions
 
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 COSMOS_KEY = os.getenv("COSMOS_KEY", "")
-DATABASE_NAME = os.getenv("MANAGER_DATABASE", "transcription_job")
+COSMOS_DB_TRANSCRIPTION = os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job")
 
 
 logger = logging.getLogger()
@@ -30,7 +30,7 @@ logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 class TranscriptionDatabase:
 
     def __init__(self) -> None:
-        self.database_name = DATABASE_NAME
+        self.database_name = COSMOS_DB_TRANSCRIPTION
 
     async def load_managers_names(self):
         """
@@ -56,10 +56,10 @@ class TranscriptionDatabase:
         manager_name = str(manager_name).upper()
         async with CosmosClient(COSMOS_ENDPOINT, credential=DefaultAzureCredential()) as client:
             try:
-                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
             except exceptions.CosmosResourceNotFoundError:
-                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+                await client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
             container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             query = "SELECT * FROM c"
             managers = [
@@ -82,10 +82,10 @@ class TranscriptionDatabase:
         """
         async with CosmosClient(COSMOS_ENDPOINT, credential=DefaultAzureCredential()) as client:
             try:
-                database = client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
             except exceptions.CosmosResourceNotFoundError:
-                await client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+                await client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
             container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             query = "SELECT * FROM c"
             managers = [
@@ -113,10 +113,10 @@ class TranscriptionDatabase:
 
         async with CosmosClient(COSMOS_ENDPOINT, credential=credential) as cosmos_client:
             try:
-                database = cosmos_client.get_database_client(os.getenv("DATABASE_NAME", "transcription_job"))
+                database = cosmos_client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
             except exceptions.CosmosResourceNotFoundError:
-                await cosmos_client.create_database(os.getenv("DATABASE_NAME", "transcription_job"))
+                await cosmos_client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
             container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
             query = "SELECT * FROM c"
 
