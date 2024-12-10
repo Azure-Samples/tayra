@@ -1,6 +1,6 @@
 # Creating a python base with shared environment variables
 
-FROM python:3.11-slim as python-base
+FROM python:3.12-slim AS python-base
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
@@ -19,7 +19,7 @@ RUN pip install --upgrade pip
 
 
 # builder-base is used to build dependencies
-FROM python-base as builder-base
+FROM python-base AS builder-base
 RUN buildDeps="build-essential" \
     && apt-get update \
     && apt-get install --no-install-recommends -y \
@@ -40,21 +40,21 @@ COPY pyproject.toml ./
 RUN poetry install --only main  # respects
 
 
-FROM python-base as environment
-ENV BRAPOC_ENV=environment
+FROM python-base AS environment
+ENV EVAL_ENV=environment
 
 COPY --from=builder-base "$VENV_PATH" "$VENV_PATH"
 
 # Create user
-RUN groupadd -g 1500 brapoc && \
-    useradd -m -u 1500 -g brapoc brapoc && \
+RUN groupadd -g 1500 evaluation && \
+    useradd -m -u 1500 -g evaluation evaluation && \
     mkdir -p src
 
-RUN chown -R brapoc:brapoc src
+RUN chown -R evaluation:evaluation src
 
-USER brapoc
-WORKDIR /app
-COPY app ./app
+USER evaluation
+WORKDIR /src
+COPY ./src/evaluation_engine/app ./app
 
 EXPOSE 8080 8000
 CMD ["uvicorn", "--proxy-headers", "--host=0.0.0.0", "--port=8080", "app.main:app"]
