@@ -2,7 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: Evaluation FastAPI",
+      "name": "Launch Edge",
+      "request": "launch",
+      "type": "msedge",
+      "url": "http://localhost:3000",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "sourceMapPathOverrides": {
+         "/*": "/__vscode-remote-uri__/*"
+      }
+    },
+    {
+      "name": "Evaluation",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/evaluation_engine",
       "request": "launch",
@@ -15,7 +26,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Transcription FastAPI",
+      "name": "Transcription",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/transcription_engine",
       "request": "launch",
@@ -28,7 +39,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web Adapter FastAPI",
+      "name": "Web Adapter",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/web_adapter",
       "request": "launch",
@@ -41,7 +52,7 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Web API FastAPI",
+      "name": "Web API",
       "type": "debugpy",
       "cwd": "${workspaceFolder}/src/web_api",
       "request": "launch",
@@ -54,10 +65,12 @@
       "justMyCode": false
     },
     {
-      "name": "Python Debugger: Python File",
-      "type": "debugpy",
+      "name": "React Server",
+      "type": "node-terminal",
       "request": "launch",
-      "program": "${file}"
+      "command": "yarn dev",
+      "cwd": "${workspaceFolder}/src/frontend",
+      "sourceMaps": true
     }
   ]
 }
