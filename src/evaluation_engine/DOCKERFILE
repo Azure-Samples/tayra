@@ -55,6 +55,7 @@ RUN chown -R evaluation:evaluation src
 USER evaluation
 WORKDIR /src
 COPY ./src/evaluation_engine/app ./app
+COPY .env .env
 
-EXPOSE 8080 8000
-CMD ["uvicorn", "--proxy-headers", "--host=0.0.0.0", "--port=8080", "app.main:app"]
+EXPOSE 8084 8084
+CMD ["uvicorn", "--proxy-headers", "--host=0.0.0.0", "--port=8084", "app.main:app"]

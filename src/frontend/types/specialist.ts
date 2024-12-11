@@ -6,4 +6,5 @@ export type Specialist = {
   role: string;
   transcriptions: Transcription[];
   performance: number;
+  image?: string;
 };

@@ -1,38 +1,37 @@
 "use client"
 import React, { useState, useRef } from "react";
 import { Message } from "@/types/message";
-import api from "@/utils/api";  // Supondo que o controle de API esteja em `utils/api.ts`
-
+import * as api from "@/utils/api";  // Supondo que o controle de API esteja em `utils/api.ts`
 
 const ChatCard = () => {
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
-
-  let messageId = 1;
+  const messageIdRef = useRef(1); // Use useRef to persist messageId across renders
 
   const sendMessage = async () => {
     if (input.trim() === '') return;
-    const userMessage: Message = { id: messageId, sender: 'user', content: input };
+    const userMessage: Message = { id: messageIdRef.current, sender: 'user', content: input };
     setMessages([...messages, userMessage]);
     setInput('');
-    messageId += 1;
+    messageIdRef.current += 1;
 
     try {
       const response = await api.post('/chat', { question: input });
 
       setMessages(prevMessages => [
         ...prevMessages,
-        { id: messageId, sender: 'bot', content: response.data }
+        { id: messageIdRef.current, sender: 'bot', content: response.data }
       ]);
     } catch (error) {
       console.error('Error streaming from API:', error);
       setMessages(prevMessages => [
         ...prevMessages,
-        { id: messageId, sender: 'bot', content: 'Ocorreu um erro. Tente novamente mais tarde.' }
+        { id: messageIdRef.current, sender: 'bot', content: 'Ocorreu um erro. Tente novamente mais tarde.' }
       ]);
     } finally {
-      messageId += 1;
+      messageIdRef.current += 1;
       chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" });
     }
   };

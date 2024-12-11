@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./src/frontend/DOCKERFILE
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+
+  evaluation:
+    build:
+      context: .
+      dockerfile: ./src/evaluation_engine/DOCKERFILE
+    ports:
+      - "8084:8084"
+    environment:
+      - ENV=environment
+    env_file:
+      - .env
+
+  transcription:
+    build:
+      context: .
+      dockerfile: ./src/transcription_engine/DOCKERFILE
+    ports:
+      - "8083:8083"
+    environment:
+      - ENV=environment
+    env_file:
+      - .env
+
+  adapter:
+    build:
+      context: .
+      dockerfile: ./src/web_adapter/DOCKERFILE
+    ports:
+      - "8082:8082"
+    environment:
+      - ENV=environment
+    env_file:
+      - .env
+
+  api:
+    build:
+      context: .
+      dockerfile: ./src/web_api/DOCKERFILE
+    ports:
+      - "8081:8081"
+    environment:
+      - ENV=environment
+    env_file:
+      - .env

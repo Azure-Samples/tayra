@@ -17,3 +17,13 @@ export const transcriptionApi = axios.create({
 export const evaluateApi = axios.create({
   baseURL: process.env.EVALUATE_API_BASE_URL || "http://localhost:8084"
 });
+
+// Add the post method
+export const post = async (url: string, data: any) => {
+  try {
+    const response = await axios.post(url, data);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
