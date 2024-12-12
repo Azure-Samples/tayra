@@ -79,7 +79,8 @@ The run script with run four microservices (Evaluation, Transcription, Web Adapt
 
 ## Demo
 
-A demo app is included to show how to use the project.
+A demo app with sample data is included to show how to use the project. 
+The sample data was generated using AI :stuck_out_tongue_winking_eye:. It simulates a conversation between a customer and a contact center company.
 
 To run the demo, follow these steps:
 
