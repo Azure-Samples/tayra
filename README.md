@@ -63,32 +63,19 @@ Tayra offers the following features:
 - Python 3.12
 - Typescript 14
 - [Az CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt)
-- [npm 8.5.1](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- [Poetry 1.8.4 or greater](https://python-poetry.org/docs/#installing-with-the-official-installer)
-- [Yarn 1.22 or greater](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable)
-- [NVM 0.40.1 or greater](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-
+- [Docker 27.3.1 or greater](https://www.docker.com/products/docker-desktop/)
+- [Docker compose](https://docs.docker.com/compose/install/)
 
 ### Installation
 
-Install dependencies for backend and frontend
-
-- `npm install frontend`
-- `poetry install`
-- `yarn install`
-
-* In some case you may need to use the NodeJS version 18:
-
-- `nvm install 18` and `nvm use 18`
+`docker compose up --build`
 
 ### Quickstart
 
 1. `git clone https://github.com/Azure-Samples/tayra.git`
-2. `bash run.sh` (for Linux users) or `run.ps1` (for Windows users)
+2. `docker compose up`
 
 The run script with run four microservices (Evaluation, Transcription, Web Adapter and Web APIs) as well as the frontend application.
-
-
 
 ## Demo
 
@@ -104,17 +91,10 @@ To run the demo, follow these steps:
 We use the [CosmosDB native RBAC](https://aka.ms/cosmos-native-rbac) to authenticate with the application. Follow the instructions below to give the permission to the user/service-principal:
 
 1. `az login`
-2. Add the CosmosDB SQL Data Contributor assigment:
+2. Allow Key authentication on Azure CosmosDB
 
 ```bash
-resourceGroupName='<myResourceGroup>'
-accountName='<myCosmosAccount>'
-readOnlyRoleDefinitionId='00000000-0000-0000-0000-000000000001' 
-
-# For Service Principals make sure to use the Object ID as found in the Enterprise applications section of the Azure Active Directory portal blade.
-principalId='<aadPrincipalId>'
-
-az cosmosdb sql role assignment create --account-name $accountName --resource-group $resourceGroupName --scope "/" --principal-id $principalId --role-definition-id $readOnlyRoleDefinitionId 
+az resource update --resource-type "Microsoft.DocumentDB/databaseAccounts" --resource-group $resourceGroupName --name $accountName --set properties.disableLocalAuth=false
 ```
 
 ## Resources

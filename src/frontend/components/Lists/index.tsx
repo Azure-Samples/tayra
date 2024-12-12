@@ -11,7 +11,7 @@ const ListLayout: React.FC = () => {
   const { transcriptions, setTranscriptions, setSelectedTranscription } = useTranscriptionContext();
   const [isLoading, setIsLoading] = useState(false);
 
-  const decodedId = decodeURIComponent(id);
+  const decodedId = decodeURIComponent(Array.isArray(id) ? id[0] : id);
   const cachedTranscriptions = transcriptions[decodedId] || [];
 
   const fetchTranscriptions = useCallback(async (specialistId: string) => {

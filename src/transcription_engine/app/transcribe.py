@@ -11,7 +11,6 @@ from queue import Queue
 from typing import List
 
 import httpx
-from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
 from azure.storage.blob.aio import BlobClient, BlobServiceClient
@@ -23,16 +22,15 @@ from app.schemas import TranscriptionJobParams, Transcription, SpecialistItem, M
 
 load_dotenv(find_dotenv())
 logging.getLogger('azure').setLevel(logging.WARNING)
-DEFAULT_CREDENTIAL = DefaultAzureCredential()
 
 class BlobTranscriptionProcessor:
     BATCH_SIZE = 50
 
     def __init__(self):
-        self.storage_account_name = os.getenv("STORAGE_ACCOUNT_NAME", "")
         self.ai_speech_key = os.getenv("AI_SPEECH_KEY", "")
         self.cosmos_endpoint = os.getenv("COSMOS_ENDPOINT", "")
         self.cosmos_key = os.getenv("COSMOS_KEY", "")
+        self.storage_connection_string  = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
         self.failed_files = set()
 
     async def __call__(self, params: TranscriptionJobParams):
@@ -55,7 +53,7 @@ class BlobTranscriptionProcessor:
         return listener
 
     async def get_failed_transcriptions(self):
-        async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
+        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as client:
             try:
                 database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
@@ -95,8 +93,7 @@ class BlobTranscriptionProcessor:
     async def _process_batch(self, prefix, checked_transcriptions_cache, results_per_page, params: TranscriptionJobParams):
         counter = 0
         transcription_metadata = []
-        async with BlobServiceClient(account_url=f"https://{self.storage_account_name}.blob.core.windows.net", 
-                                     credential=DEFAULT_CREDENTIAL) as blob_service_client:
+        async with BlobServiceClient.from_connection_string(self.storage_connection_string) as blob_service_client:
             container_client = blob_service_client.get_container_client(params.origin_container)
 
             batch = []
@@ -166,8 +163,7 @@ class BlobTranscriptionProcessor:
         metadata_json = json.dumps(metadata, ensure_ascii=True)
         output_file = f"metadata-{str(time.time())}.json"
 
-        async with BlobServiceClient(account_url=f"https://{self.storage_account_name}.blob.core.windows.net", 
-                                     credential=DEFAULT_CREDENTIAL) as blob_service_client:
+        async with BlobServiceClient.from_connection_string(self.storage_connection_string) as blob_service_client:
             metadata_blob_client = blob_service_client.get_blob_client(
             container=params.origin_container, blob=output_file
             )
@@ -355,7 +351,7 @@ class BlobTranscriptionProcessor:
             assistants=[specialist]
         )
 
-        async with CosmosClient(self.cosmos_endpoint, credential=DEFAULT_CREDENTIAL) as client:
+        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as client:
             try:
                 database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()

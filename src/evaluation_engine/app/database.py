@@ -13,14 +13,11 @@ import sys
 from typing import Dict, List
 
 from azure.core import exceptions as azure_exceptions
-from azure.identity import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
-
 
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 COSMOS_KEY = os.getenv("COSMOS_KEY", "")
 DATABASE_NAME = os.getenv("MANAGER_DATABASE", "")
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -30,8 +27,7 @@ logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 class TranscriptionDatabase:
 
     def __init__(self) -> None:
-        credential = DefaultAzureCredential()
-        self.client = CosmosClient(COSMOS_ENDPOINT, credential)  #type: ignore
+        self.client = CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY)
         self.database_name = DATABASE_NAME
 
     async def load_evaluation_for_manager(self, manager_name: str):

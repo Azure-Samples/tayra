@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "sourceMap": true,
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -24,6 +24,12 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["next-env.d.ts", 
+              "**/*.ts", 
+              "**/*.tsx", 
+              ".next/types/**/*.ts", 
+              "src/**/*",
+              "app/**/*" 
+            ],
+  "exclude": ["node_modules",  "dist"]
 }

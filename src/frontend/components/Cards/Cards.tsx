@@ -41,7 +41,7 @@ const CardLayout = () => {
           ...managerData,
           specialists: managerData.assistants.map((specialist: Specialist) => ({
             ...specialist,
-            image: "/images/users/user-02.png",
+            image: "/images/user/user-02.png",
           })),
         });
       }
@@ -80,20 +80,20 @@ const CardLayout = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 p-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 p-4">
         {selectedManager
           ? selectedManager.specialists.map((specialist, key) => (
             <div
               key={key}
-              className="flex flex-col items-center border border-stroke p-4 rounded-lg dark:border-strokedark dark:bg-boxdark hover:shadow-lg transition-shadow cursor-pointer"
+              className="flex flex-col items-center border border-stroke p-2 rounded-lg dark:border-strokedark dark:bg-boxdark hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => handleSpecialistClick(specialist.name)}
             >
               <Image
-                src={specialist.image || "/images/users/user-02.png"}
-                width={250}
-                height={250}
+                src={specialist.image || "/images/user/user-02.png"}
+                width={75}
+                height={75}
                 alt={specialist.name}
-                className="rounded-full mb-4"
+                className="rounded-full mb-2"
               />
               <h5 className="text-lg font-bold text-black dark:text-white">
                 {specialist.name}
@@ -105,18 +105,18 @@ const CardLayout = () => {
           ))
           : managers.map((manager, key) => (
             <div
-              className="flex flex-col items-center border border-stroke p-4 rounded-lg dark:border-strokedark dark:bg-boxdark hover:shadow-lg transition-shadow cursor-pointer"
+              className="flex flex-col items-center border border-stroke p-2 rounded-lg dark:border-strokedark dark:bg-boxdark hover:shadow-lg transition-shadow cursor-pointer"
               key={key}
               onClick={() => handleManagerClick(manager.name)}
             >
               <Image
                 src="/images/user/best-manager.png"
-                width={250}
-                height={250}
+                width={150}
+                height={150}
                 alt={manager.name}
-                className="rounded-full mb-4"
+                className="rounded-full mb-2"
               />
-              <h5 className="text-xl font-bold text-black dark:text-white mb-1 text-center">
+              <h5 className="text-lg font-bold text-black dark:text-white mb-1 text-center">
                 {manager.name}
               </h5>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
