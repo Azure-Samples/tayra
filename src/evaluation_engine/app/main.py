@@ -188,4 +188,5 @@ async def get_specialist_evaluations(transcription_id: str) -> JSONResponse:
                 parameters=[{"name": "@transcription_id", "value": transcription_id}]
             )
         ]
+    
     return JSONResponse({"result": evaluations})
