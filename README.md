@@ -83,9 +83,25 @@ A demo app is included to show how to use the project.
 
 To run the demo, follow these steps:
 
-1.
-2.
-3.
+1. Configure the Managers (Configuration -> Configure Managers)
+  - Provide a Manager Name
+  - Provide a Manager Role (ex: Manager)
+  - Add the Team Members/Specialists (Provide the Specialist Name and Role) 
+2. Configure the Rules (the criteria to be evaluated)
+  - Examples of criteria/description:
+    - Cordiality: Demonstrated cordiality with the customer
+    - Objectivity: Demonstrated objectivity and transparency with the client
+    - Introduction: Introduced yourself to the customer
+  - Examples of Business rules
+    - clarity, well-communication, customer-obsession
+3. Upload the Audio File (Job Management -> Upload). You can use the [sample data](sample/audios/Tayra-Sample-01.mp3) provided.
+4. Transcribe the Audio File (Job Management -> Transcribe)
+5. Evaluate the Audio File (Job Management -> Evaluate)
+6. Analyze the results (Transcription Analysis)
+
+You should see a screen like that with the evaluation results:
+
+![Evaluation Results](images/evaluation-results.png)
 
 ## CosmosDB EntraID permissions
 We use the [CosmosDB native RBAC](https://aka.ms/cosmos-native-rbac) to authenticate with the application. Follow the instructions below to give the permission to the user/service-principal:
@@ -105,8 +121,7 @@ az resource update --resource-type "Microsoft.DocumentDB/databaseAccounts" --res
 - [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview)
 
 ## TO-DO
-- Prepare sample audio data
-- Prepare the demo step-by-step guidance
 - Add PowerBI dashboard template with analytics
 - Add language selection option
 - Add transcription service options (currently only Fast Transcription API is used)
+- Add tracking status in the UI for all the features
