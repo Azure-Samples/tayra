@@ -7,7 +7,6 @@ import os
 from promptflow.client import PFClient
 from promptflow.core import AzureOpenAIModelConfiguration
 
-from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
 
@@ -38,6 +37,7 @@ MODEL_URL: str = os.environ.get("GPT4_URL", "")
 MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
 MONITOR: str = os.environ.get("AZ_CONNECTION_LOG", "")
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
+COSMOS_KEY = os.getenv("COSMOS_KEY", "")
 
 MODEL_CONFIG = AzureOpenAIModelConfiguration(
     azure_deployment="tayra-gpt-4o",
@@ -172,7 +172,7 @@ async def get_specialist_evaluations(transcription_id: str) -> JSONResponse:
     **Returns**:\n
         JSONResponse: The response object containing the improved transcription data.
     """
-    async with CosmosClient(COSMOS_ENDPOINT, DefaultAzureCredential()) as client:
+    async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
         try:
             database = client.get_database_client(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
             database.read()

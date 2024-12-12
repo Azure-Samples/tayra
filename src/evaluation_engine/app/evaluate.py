@@ -5,7 +5,6 @@ import sys
 import time
 from uuid import uuid4
 
-from azure.identity import DefaultAzureCredential
 from azure.cosmos import CosmosClient
 from azure.cosmos import exceptions
 from dotenv import find_dotenv, load_dotenv
@@ -17,11 +16,11 @@ from app.schemas import HumanEvaluation, Transcription
 
 load_dotenv(find_dotenv())
 
-DEFAULT_CREDENTIAL = DefaultAzureCredential()
 MODEL_URL: str = os.environ.get("GPT4_URL", "")
 MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
 MODEL_NAME: str = os.environ.get("GPT4_NAME", "")
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
+COSMOS_KEY = os.getenv("COSMOS_KEY", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_CONFIG = AzureOpenAIModelConfiguration(
@@ -47,7 +46,8 @@ class EvaluateTranscription:
     def __call__(self, transcription: Transcription):
         logger.info("Starting the process to evaluate transcriptions...")
         start_time = time.time()
-        with CosmosClient(COSMOS_ENDPOINT, DEFAULT_CREDENTIAL) as client:
+        
+        with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
             try:
                 database = client.get_database_client(
                     os.getenv("COSMOS_DB_EVALUATION", "evaluation_job")
@@ -57,6 +57,7 @@ class EvaluateTranscription:
                 client.create_database(
                     os.getenv("COSMOS_DB_EVALUATION", "evaluation_job")
                 )
+
             container = database.get_container_client(
                 os.getenv("CONTAINER_NAME", "evaluations")
             )
@@ -103,7 +104,7 @@ class EvaluateTranscription:
 def set_human_evaluation(transcription_id: str, evaluation: HumanEvaluation):
     evaluation_data = evaluation.model_dump()
     evaluation_data["evaluation_date"] = datetime.datetime.today()
-    with CosmosClient(COSMOS_ENDPOINT, DEFAULT_CREDENTIAL) as client:
+    with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
         try:
             database = client.get_database_client(os.getenv("COSMOS_DB_EVALUATION", "evaluation_job"))
             database.read()

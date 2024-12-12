@@ -12,7 +12,6 @@ import os
 import sys
 from typing import Dict, List
 
-from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
 
@@ -36,7 +35,7 @@ class TranscriptionDatabase:
         """
         Load list of managers
         """
-        async with CosmosClient(COSMOS_ENDPOINT, credential=DefaultAzureCredential()) as client:
+        async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
             database = client.get_database_client(self.database_name)
             container = database.get_container_client("evaluation")
             query = "SELECT * FROM c"
@@ -54,7 +53,7 @@ class TranscriptionDatabase:
             Exception: If an error occurs while loading the manager data.
         """
         manager_name = str(manager_name).upper()
-        async with CosmosClient(COSMOS_ENDPOINT, credential=DefaultAzureCredential()) as client:
+        async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
             try:
                 database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
@@ -80,7 +79,7 @@ class TranscriptionDatabase:
         Returns:
             List[Dict]: A list of dictionaries containing the transcription data for the specialist.
         """
-        async with CosmosClient(COSMOS_ENDPOINT, credential=DefaultAzureCredential()) as client:
+        async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
             try:
                 database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
@@ -109,9 +108,7 @@ class TranscriptionDatabase:
         Returns:
             List[Dict]: A list of dictionaries containing the transcription data for the specialist.
         """
-        credential = DefaultAzureCredential()
-
-        async with CosmosClient(COSMOS_ENDPOINT, credential=credential) as cosmos_client:
+        async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as cosmos_client:
             try:
                 database = cosmos_client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()

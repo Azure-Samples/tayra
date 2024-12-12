@@ -13,9 +13,8 @@ Functions:
         Determines the type of file address (file, folder, or zip) and processes accordingly.
 
 Usage:
-    Set the environment variables STORAGE_ACCOUNT_NAME. 
-    The DefaultAzureCredential will be used for authentication.
-    to the appropriate values for Azure Blob Storage.
+    The Connection string from Blob Storage will be used for authentication.
+    Be sure to have the necessary environment variables set before running the script.
 
     Call the main() function to start the upload job.
 """
@@ -33,12 +32,10 @@ from azure.storage.blob.aio import BlobServiceClient
 
 # Load environment variables
 from dotenv import find_dotenv, load_dotenv
-from azure.identity.aio import DefaultAzureCredential
 
 load_dotenv(find_dotenv())
 
-STORAGE_ACCOUNT_NAME: str = os.getenv("STORAGE_ACCOUNT_NAME", "")
-DEFAULT_CREDENTIALS = DefaultAzureCredential()
+AZURE_STORAGE_CONNECTION_STRING: str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
 
 logger = logging.getLogger("azure")
 logger.setLevel(logging.INFO)
@@ -66,14 +63,14 @@ async def upload_file_to_blob(
     """
     try:
         file_name = "".join(c for c in file_name if c.isalnum() or c == ".")
-        async with BlobServiceClient(account_url=f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net", credential=DEFAULT_CREDENTIALS) as blob_service_client:
-            blob_path = f"{manager_name}/{specialist_name}/{file_name}"
-            blob_client = blob_service_client.get_blob_client(
-                container=container_name, blob=blob_path
-            )
+        blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+        blob_path = f"{manager_name}/{specialist_name}/{file_name}"
+        blob_client = blob_service_client.get_blob_client(
+            container=container_name, blob=blob_path
+        )
 
-            await blob_client.upload_blob(file_content.getvalue())
-            logger.info("Successfully uploaded file: %s", blob_path)
+        await blob_client.upload_blob(file_content.getvalue())
+        logger.info("Successfully uploaded file: %s", blob_path)
 
     except Exception as e:
         logger.error("Error occurred while uploading to Azure Blob Storage: %s", str(e))

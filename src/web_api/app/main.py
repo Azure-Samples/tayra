@@ -13,7 +13,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from azure.identity.aio import DefaultAzureCredential
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
 
@@ -26,7 +25,6 @@ load_dotenv(find_dotenv())
 COSMOS_ENDPOINT: str = os.getenv("COSMOS_ENDPOINT", "")
 COSMOS_KEY: str = os.getenv("COSMOS_KEY", "")
 COSMOS_DB_MANAGER_RULES: str = os.getenv("COSMOS_DB_MANAGER_RULES", "")
-DEFAULT_CREDENTIALS = DefaultAzureCredential()
 
 
 tags_metadata: list[dict] = [
@@ -101,7 +99,7 @@ async def upsert_manager(manager_data: ManagerInterface) -> JSONResponse:
     """
     Uploads an audio file and starts a background task to process it.
     """
-    async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
+    async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as cosmos_client:
         try:
             database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
@@ -132,7 +130,7 @@ async def upsert_rule(rule_data: Criteria) -> JSONResponse:
     """
     Uploads an audio file and starts a background task to process it.
     """
-    async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
+    async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as cosmos_client:
         try:
             database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
@@ -164,7 +162,7 @@ async def managers_names() -> JSONResponse:
     """
     Uploads an audio file and starts a background task to process it.
     """
-    async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
+    async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as cosmos_client:
         try:
             database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
@@ -202,7 +200,7 @@ async def list_rules() -> JSONResponse:
     """
     Uploads an audio file and starts a background task to process it.
     """
-    async with CosmosClient(COSMOS_ENDPOINT, credential=DEFAULT_CREDENTIALS) as cosmos_client:
+    async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as cosmos_client:
         try:
             database = cosmos_client.get_database_client(COSMOS_DB_MANAGER_RULES)
             await database.read()
