@@ -111,6 +111,9 @@ We use the [CosmosDB native RBAC](https://aka.ms/cosmos-native-rbac) to authenti
 2. Allow Key authentication on Azure CosmosDB
 
 ```bash
+resourceGroupName=<your-resource-group-name>
+accountName=<your-cosmosdb-account-name>
+
 az resource update --resource-type "Microsoft.DocumentDB/databaseAccounts" --resource-group $resourceGroupName --name $accountName --set properties.disableLocalAuth=false
 ```
 
