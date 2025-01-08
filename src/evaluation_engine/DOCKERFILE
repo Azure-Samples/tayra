@@ -35,9 +35,10 @@ RUN curl -sSL https://install.python-poetry.org | python && \
 
 # We copy our Python requirements here to cache them
 # and install only runtime deps using poetry
-WORKDIR $PYSETUP_PATH
+WORKDIR /opt/pysetup
 COPY pyproject.toml ./
-RUN poetry install --only main  # respects
+RUN poetry config virtualenvs.in-project true \
+    && poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
 
 FROM python-base AS environment

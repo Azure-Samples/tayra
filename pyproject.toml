@@ -22,7 +22,7 @@ aistudio-request = {git = "https://github.com/Azure-Samples/ai-requests-template
 numpy = "^2.1.1"
 scipy = "^1.14.1"
 promptflow = {extras = ["all"], version = "^1.16.1"}
-
+marshmallow = "3.22.0"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^2.15.9"
