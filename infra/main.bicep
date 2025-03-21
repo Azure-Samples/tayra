@@ -16,12 +16,23 @@ param resourceGroupName string = 'rg-tayra-callcenter-poc'
 @description('cosmosdb account name. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
 param cosmosDbAccountName string = 'tayracosmosdb-poc-${uniqueString(resourceGroupName)}'
 
+@description('cosmosdb database name. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
+param cosmosDbName string = 'tayradbpoc'
+
 @description('That name is the name of our application. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
 param storageAccountName string = 'tayrastgpoc${uniqueString(resourceGroupName)}'
 
 @description('That name is the name of our application. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
 param aiServicesName string = 'aiservices-poc-${uniqueString(resourceGroupName)}'
 
+@description('The name of the cosmosdb container')
+param containerNames array = [
+  'evaluations'
+  'managers'
+  'rules'
+  'transcriptions'
+  'humanEvaluations'
+]
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: resourceGroupName
@@ -34,6 +45,8 @@ module cosmosdb 'modules/cosmosDB.bicep' = {
   params: {
     location: location
     cosmosDbAccountName: cosmosDbAccountName
+    cosmosDbName: cosmosDbName
+    containerNames: containerNames
   }
 }
 
