@@ -19,6 +19,7 @@ load_dotenv(find_dotenv())
 MODEL_URL: str = os.environ.get("GPT4_URL", "")
 MODEL_KEY: str = os.environ.get("GPT4_KEY", "")
 MODEL_NAME: str = os.environ.get("GPT4_NAME", "")
+MODEL_VERSION: str = os.environ.get("GPT4_VERSION", "")
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT", "")
 COSMOS_KEY = os.getenv("COSMOS_KEY", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_CONFIG = AzureOpenAIModelConfiguration(
     azure_deployment=MODEL_NAME,
     azure_endpoint=MODEL_URL,
-    api_version="2024-08-01-preview",
+    api_version= MODEL_VERSION,
     api_key=MODEL_KEY
 )
 

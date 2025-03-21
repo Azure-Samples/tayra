@@ -2,7 +2,7 @@
 This module contains functions for loading data from the Cosmos DB.
 Functions:
     load_manager_data(manager_name: Any) -> Dict: Loads manager data
-        from the evaluation container in the Cosmos DB based on the given manager name.
+        from the evaluations container in the Cosmos DB based on the given manager name.
     load_transcription_data(specialist_name: Any) -> List[Dict]: Loads transcription data
         for a given specialist name.
 """
@@ -37,13 +37,13 @@ class TranscriptionDatabase:
         """
         async with CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY) as client:
             database = client.get_database_client(self.database_name)
-            container = database.get_container_client("evaluation")
+            container = database.get_container_client("evaluations")
             query = "SELECT * FROM c"
         return [item["name"] async for item in container.query_items(query=query)]
 
     async def load_manager_data(self, manager_name: str) -> Dict:
         """
-        Loads manager data from the evaluation container
+        Loads manager data from the evaluations container
         in the Cosmos DB based on the given manager name.
         Args:
             manager_name (str): The name of the manager.

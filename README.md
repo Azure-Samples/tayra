@@ -65,17 +65,60 @@ Tayra offers the following features:
 - [Az CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt)
 - [Docker 27.3.1 or greater](https://www.docker.com/products/docker-desktop/)
 - [Docker compose](https://docs.docker.com/compose/install/)
+- Azure Subscription
+- Azure AI Services (OpenAI Models)
+- Azure Cosmos DB
+- Azure Storage Account
 
-### Installation
+### Setup
 
-`docker compose up --build`
+#### Cosmos DB
+Create a Cosmos DB account and a database.
+![Cosmos DB](images/resources/cosmosdb_database_containers.png)
+Create 5 containers for the database:
+- managers
+- rules
+- evaluations
+- transcriptions
+- humanEvaluations
+
+Configure Network to allow access from the internet.
+![Cosmos DB Network](images/resources/cosmosdb_network.png)
+
+Get Connection String
+![Cosmos DB Connection String](images/resources/cosmos_keys.png)
+
+
+#### Azure Storage Account
+Create a Storage Account and a Blob Container.
+![Storage Account](images/resources/storage_account_containers.png)
+Allow access from the internet and keys.
+![Storage Account Network](images/resources/storage_account_network1.png)
+Get Connection String
+![Storage Account Connection String](images/resources/storage_account_keys.png)
+
+
+#### Azure OpenAI - AI Services
+[Refernce](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/get-started-speech-to-text?tabs=windows%2Cterminal&pivots=ai-studio)
+
+Create an Azure OpenAI resource and Deploy a GPT-4 model.
+![Azure OpenAI](images/resources/aiservices_keys.png)
+Get Endpoint for AI Services and API Key
+![Azure OpenAI Keys](images/resources/aiservices_endpoints.png)
 
 ### Quickstart
 
 1. `git clone https://github.com/Azure-Samples/tayra.git`
-2. `docker compose up`
+2. `cd tayra`
+3. `az login`
+4. [Configure cosmosdb permissions to access by keys](#cosmosdb-entraid-permissions)
+5. Run bicep template to create the resources `az deployment sub create --location eastus2 --template-file infra/main.bicep`. Another option is to use the bicep add-in for VS Code.
+6. After  the deployment is complete, get keys for the Cosmos DB, AI Services and the connection string for Storage Account.
+7. `docker compose up`
+8. After deploy go to http://localhost:3000	
 
 The run script with run four microservices (Evaluation, Transcription, Web Adapter and Web APIs) as well as the frontend application.
+
 
 ## Demo
 
