@@ -1,6 +1,8 @@
 param location string = resourceGroup().location
 param cosmosDbAccountName string
 param cosmosDbName string
+@description('Array of AAD principal object IDs that need Cosmos DB data-plane access.')
+param cosmosDataPrincipalIds array = []
 
 param containerNames array = [
   'evaluations'
@@ -10,6 +12,12 @@ param containerNames array = [
   'humanEvaluations'
 ]
 
+var defaultCosmosPrincipalIds = [
+  '02a41094-a3bc-4422-8676-9fa9b3287abd'
+]
+
+var effectiveCosmosPrincipalIds = concat(defaultCosmosPrincipalIds, cosmosDataPrincipalIds)
+
 resource account 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' = {
   name: toLower(cosmosDbAccountName)
   location: location
@@ -17,13 +25,14 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' = {
     defaultExperience: 'Core (SQL)'
     'hidden-cosmos-mmspecial': ''
     'hidden-workload-type': 'Learning'
+    SecurityControl: 'Ignore'
   }
   kind: 'GlobalDocumentDB'
   identity: {
     type: 'None'
   }
   properties: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
     isVirtualNetworkFilterEnabled: false
@@ -73,6 +82,63 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' = {
     ]
   }
 }
+
+var dataContributorDefinitionId = '${account.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+var dataReaderDefinitionId = '${account.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000001'
+
+resource customDataOwnerRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-12-01-preview' = {
+  parent: account
+  name: guid(account.name, 'tayra-data-plane-owner')
+  properties: {
+    roleName: 'TayraCosmosDataOwner'
+    type: 'CustomRole'
+    assignableScopes: [
+      '/'
+    ]
+    permissions: [
+      {
+        dataActions: [
+          'Microsoft.DocumentDB/databaseAccounts/readMetadata'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
+        ]
+      }
+    ]
+  }
+}
+
+var dataOwnerDefinitionId = customDataOwnerRole.id
+
+resource cosmosRoleAssignmentsContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = [for principalId in effectiveCosmosPrincipalIds: {
+  parent: account
+  name: guid(account.name, principalId, 'cosmos-data-role')
+  properties: {
+    roleDefinitionId: dataContributorDefinitionId
+    principalId: principalId
+    scope: '/'
+  }
+}]
+
+resource cosmosRoleAssignmentsReader 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = [for principalId in effectiveCosmosPrincipalIds: {
+  parent: account
+  name: guid(account.name, principalId, 'cosmos-data-reader-role')
+  properties: {
+    roleDefinitionId: dataReaderDefinitionId
+    principalId: principalId
+    scope: '/'
+  }
+}]
+
+resource cosmosRoleAssignmentsOwner 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = [for principalId in effectiveCosmosPrincipalIds: {
+  parent: account
+  name: guid(account.name, principalId, 'cosmos-data-owner-role')
+  properties: {
+    roleDefinitionId: dataOwnerDefinitionId
+    principalId: principalId
+    scope: '/'
+  }
+}]
 
 resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-12-01-preview' = {
   parent: account
