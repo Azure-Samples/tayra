@@ -1,53 +1,91 @@
-
-
 @description('Location for all resources.')
 param location string = resourceGroup().location
 
-@allowed([
-  'S0'
-])
-param sku string = 'S0'
+@description('Azure AI Foundry hub (Cognitive Services account) name to either create or update.')
+param aiHubName string
 
-@description('Name of the AI Services account.')
-param aiServicesName string
+@description('Azure AI Foundry project name to create inside the hub.')
+param aiProjectName string
 
-resource aisaccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
-  name: aiServicesName
+@description('Friendly display name for the project.')
+param projectDisplayName string = aiProjectName
+
+@description('Optional description for the project.')
+param projectDescription string = ''
+
+@description('Name of the GPT-4 deployment to create inside the Azure AI hub.')
+param gptDeploymentName string = 'gpt4o'
+
+@description('Model identifier to deploy (OpenAI catalog name).')
+param gptModelName string = 'gpt-4o'
+
+@description('Specific model version to deploy.')
+param gptModelVersion string = '2024-08-06'
+
+@description('Manual capacity for the GPT-4 deployment.')
+@minValue(1)
+param gptCapacity int = 1
+
+
+resource aiHub 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
+  name: aiHubName
+  location: location
+  sku: {
+    name: 'S0'
+  }
+  kind: 'AIServices'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    allowProjectManagement: true
+    customSubDomainName: aiHubName
+    networkAcls: {
+      defaultAction: 'Allow'
+      virtualNetworkRules: []
+      ipRules: []
+    }
+    publicNetworkAccess: 'Enabled'
+    disableLocalAuth: false
+  }
+}
+
+
+resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {
+  name: aiProjectName
+  parent: aiHub
   location: location
   identity: {
     type: 'SystemAssigned'
   }
-  sku: {
-    name: sku
-  }
-  kind: 'AIServices'
   properties: {
-    publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Deny'
-    }
-    disableLocalAuth: true
+    displayName: projectDisplayName
+    description: projectDescription
   }
 }
 
-
-resource aisaccountgpt4omodel 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
-  parent: aisaccount
-  name: 'gpt-4o'
-  sku: {
-    name: 'Standard'
-    capacity: 30
-  }
+resource gpt4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-04-01-preview' = {
+  name: gptDeploymentName
+  parent: aiHub
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-05-13'
+      name: gptModelName
+      version: gptModelVersion
     }
-    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
-    currentCapacity: 30
+    raiPolicyName: 'Microsoft.Default'
+  }
+  sku: {
+    name: 'Standard'
+    capacity: gptCapacity
   }
 }
 
-output aiServiceEndpoint string = aisaccount.properties.endpoint
-output aiServiceVersion string = aisaccountgpt4omodel.properties.model.version
+output projectName string = aiProjectName
+output projectId string = aiProject.id
+output projectPrincipalId string = aiProject.identity.principalId
+output projectEndpoint string = 'https://${aiHubName}.services.ai.azure.com/api/projects/${aiProjectName}'
+output gptDeploymentName string = gptDeploymentName
+output aiHubEndpoint string = 'https://${aiHubName}.cognitiveservices.azure.com/'
+@secure()
+output aiHubPrimaryKey string = aiHub.listKeys().key1

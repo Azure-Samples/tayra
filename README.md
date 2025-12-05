@@ -72,6 +72,40 @@ Tayra offers the following features:
 
 ### Setup
 
+### Quickstart
+
+1. `git clone https://github.com/Azure-Samples/tayra.git`
+2. `cd tayra`
+3. `az login`
+4. `azd init` (answer the prompts to wire azd to this repo)
+5. `azd env new <env-name>` (or `azd env select <env-name>` if it already exists)
+6. [Configure cosmosdb permissions to access by keys](#cosmosdb-entraid-permissions)
+7. Run bicep template to create the resources `az deployment sub create --location eastus2 --template-file infra/main.bicep`. Another option is to use the bicep add-in for VS Code.
+8. After the deployment is complete, capture any outputs with `azd env set <KEY> <value>` as needed so the env script can mirror them, then get keys for the Cosmos DB, AI Services and the connection string for Storage Account.
+9. `docker compose up`
+10. After deploy go to http://localhost:3000	
+
+The run script with run four microservices (Evaluation, Transcription, Web Adapter and Web APIs) as well as the frontend application.
+
+
+
+#### Environment variables
+Copy the provided template and fill in your resource secrets before running any services:
+
+```bash
+cp .env.example .env
+```
+
+```bash
+cd .../tayra
+chmod +x infra/scripts/set-env.sh   # one-time setup
+azd env select <your-azd-env>       # or `azd env new <name>` if none exists
+azd provision                       # populates the env with resource outputs
+./infra/scripts/set-env.sh
+```
+
+The script mirrors whatever `azd env get-values` returns, so ensure those keys exist. If you need to override anything manually run `azd env set <KEY> <value>` and then rerun the script. Double-check the generated `.env` and update any remaining placeholders before starting services.
+
 #### Cosmos DB
 Create a Cosmos DB account and a database.
 ![Cosmos DB](images/resources/cosmosdb_database_containers.png)
@@ -105,19 +139,6 @@ Create an Azure OpenAI resource and Deploy a GPT-4 model.
 ![Azure OpenAI](images/resources/aiservices_keys.png)
 Get Endpoint for AI Services and API Key
 ![Azure OpenAI Keys](images/resources/aiservices_endpoints.png)
-
-### Quickstart
-
-1. `git clone https://github.com/Azure-Samples/tayra.git`
-2. `cd tayra`
-3. `az login`
-4. [Configure cosmosdb permissions to access by keys](#cosmosdb-entraid-permissions)
-5. Run bicep template to create the resources `az deployment sub create --location eastus2 --template-file infra/main.bicep`. Another option is to use the bicep add-in for VS Code.
-6. After  the deployment is complete, get keys for the Cosmos DB, AI Services and the connection string for Storage Account.
-7. `docker compose up`
-8. After deploy go to http://localhost:3000	
-
-The run script with run four microservices (Evaluation, Transcription, Web Adapter and Web APIs) as well as the frontend application.
 
 
 ## Demo

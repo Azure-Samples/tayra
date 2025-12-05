@@ -111,9 +111,6 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
       }
     }
   }
-  dependsOn: [
-    account
-  ]
 }]
 
 output cosmosDbEndpoint string = account.properties.documentEndpoint

@@ -4,9 +4,11 @@ param storageAccountName string
 resource storageAccountName_resource 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
+  tags: {
+    SecurityControl: 'Ignore'
+  }
   sku: {
     name: 'Standard_LRS'
-    tier: 'Standard'
   }
   kind: 'StorageV2'
   properties: {
@@ -15,7 +17,7 @@ resource storageAccountName_resource 'Microsoft.Storage/storageAccounts@2023-05-
     publicNetworkAccess: 'Enabled'
     allowCrossTenantReplication: false
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: true
+    allowBlobPublicAccess: false
     allowSharedKeyAccess: true
     largeFileSharesState: 'Enabled'
     networkAcls: {
@@ -47,10 +49,6 @@ resource storageAccountName_resource 'Microsoft.Storage/storageAccounts@2023-05-
 resource storageAccountName_default 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storageAccountName_resource
   name: 'default'
-  sku: {
-    name: 'Standard_LRS'
-    tier: 'Standard'
-  }
   properties: {
     containerDeleteRetentionPolicy: {
       enabled: true
@@ -70,10 +68,6 @@ resource storageAccountName_default 'Microsoft.Storage/storageAccounts/blobServi
 resource storageAccount_files_default 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
   parent: storageAccountName_resource
   name: 'default'
-  sku: {
-    name: 'Standard_LRS'
-    tier: 'Standard'
-  }
   properties: {
     protocolSettings: {
       smb: {}
@@ -117,7 +111,7 @@ resource storageAccountNamedefault_audio_files 'Microsoft.Storage/storageAccount
     }
     defaultEncryptionScope: '$account-encryption-key'
     denyEncryptionScopeOverride: false
-    publicAccess: 'Container'
+    publicAccess: 'None'
   }
 
 }
@@ -131,9 +125,10 @@ resource storageAccountNamedefault_transcripts 'Microsoft.Storage/storageAccount
     }
     defaultEncryptionScope: '$account-encryption-key'
     denyEncryptionScopeOverride: false
-    publicAccess: 'Container'
+    publicAccess: 'None'
   }
 
 }
 
+@secure()
 output storageAccountConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountName_resource.listKeys().keys[0].value};EndpointSuffix=core.windows.net'

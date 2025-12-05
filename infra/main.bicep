@@ -10,20 +10,44 @@ targetScope = 'subscription'
 )
 param location string = 'eastus2'
 
+param deploymentTimestamp string = utcNow('yyyyMMddHHmmss')
+
+param uniquePrefix string = substring(uniqueString(subscription().id, deploymentTimestamp), 0, 4)
+
 @description('The name of the resource group to create')
-param resourceGroupName string = 'rg-tayra-callcenter-poc'
+param resourceGroupName string = 'rg-tayra-callcenter'
 
 @description('cosmosdb account name. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
-param cosmosDbAccountName string = 'tayracosmosdb-poc-${uniqueString(resourceGroupName)}'
+param cosmosDbAccountName string = 'tayracosmosdb-${uniquePrefix}'
 
 @description('cosmosdb database name. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
-param cosmosDbName string = 'tayradbpoc'
+param cosmosDbName string = 'tayradb'
 
 @description('That name is the name of our application. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
-param storageAccountName string = 'tayrastgpoc${uniqueString(resourceGroupName)}'
+param storageAccountName string = 'tayrastg${uniquePrefix}'
 
-@description('That name is the name of our application. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
-param aiServicesName string = 'aiservices-poc-${uniqueString(resourceGroupName)}'
+@description('Azure AI Foundry project name. It has to be unique within the selected hub.')
+param aiProjectName string = 'tayra-project-${uniquePrefix}'
+
+@description('Azure AI Foundry hub (Cognitive Services account) name. It has to be globally unique.')
+param aiHubName string = 'tayra-hub-${uniquePrefix}'
+
+@description('Name for the GPT-4 deployment inside Azure AI.')
+param gptDeploymentName string = 'tayra-gpt4-${uniquePrefix}'
+@description('Azure AI Speech resource name (Cognitive Services Speech).')
+param speechAccountName string = 'tayra-speech-${uniquePrefix}'
+
+
+@description('Model identifier to deploy (e.g., gpt-4o).')
+param gptModelName string = 'gpt-4o'
+
+@description('Model version to deploy.')
+param gptModelVersion string = '2024-08-06'
+
+@description('Manual capacity for the GPT-4 deployment.')
+@minValue(1)
+param gptCapacity int = 1
+
 
 @description('The name of the cosmosdb container')
 param containerNames array = [
@@ -59,17 +83,39 @@ module storageAccount 'modules/storageAccount.bicep' = {
   }
 }
 
-module aiServices 'modules/azureAIServices.bicep' = {
-  name: aiServicesName
+module speechAccount 'modules/azureAISpeech.bicep' = {
+  name: 'speechaccount-module'
   scope: rg
   params: {
     location: location
-    sku: 'S0'
-    aiServicesName: aiServicesName
+    speechAccountName: speechAccountName
   }
 }
 
-output aiServiceEndpoint string = aiServices.outputs.aiServiceEndpoint
-output aiServiceVersion string = aiServices.outputs.aiServiceVersion
+module aiProject 'modules/azureAIServices.bicep' = {
+  name: 'ai-project-module'
+  scope: rg
+  params: {
+    location: location
+    aiHubName: aiHubName
+    aiProjectName: aiProjectName
+    gptDeploymentName: gptDeploymentName
+    gptModelName: gptModelName
+    gptModelVersion: gptModelVersion
+    gptCapacity: gptCapacity
+  }
+}
+
+output aiProjectEndpoint string = aiProject.outputs.projectEndpoint
+output aiProjectId string = aiProject.outputs.projectId
+output aiProjectPrincipalId string = aiProject.outputs.projectPrincipalId
+output aiHubEndpoint string = aiProject.outputs.aiHubEndpoint
+@secure()
+output aiHubKey string = aiProject.outputs.aiHubPrimaryKey
+output gpt4DeploymentName string = aiProject.outputs.gptDeploymentName
 output cosmosDbEndpoint string = cosmosdb.outputs.cosmosDbEndpoint
+@secure()
 output storageAccountConnectionString string = storageAccount.outputs.storageAccountConnectionString
+output aiSpeechEndpoint string = speechAccount.outputs.speechEndpoint
+@secure()
+output aiSpeechKey string = speechAccount.outputs.speechKey
