@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 import uuid
 from logging.handlers import QueueHandler, QueueListener
@@ -13,10 +14,13 @@ from typing import List
 import httpx
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import exceptions
+from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import BlobClient, BlobServiceClient
 from dotenv import find_dotenv, load_dotenv
 
-sys.path.append(os.getcwd())
+PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+if str(PACKAGE_ROOT) not in sys.path:
+    sys.path.append(str(PACKAGE_ROOT))
 
 from app.schemas import TranscriptionJobParams, Transcription, SpecialistItem, ManagerModel
 
@@ -31,6 +35,8 @@ class BlobTranscriptionProcessor:
         self.cosmos_endpoint = os.getenv("COSMOS_ENDPOINT", "")
         self.cosmos_key = os.getenv("COSMOS_KEY", "")
         self.storage_connection_string  = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+        self.use_aad_auth = self._should_use_aad_auth()
+        self._aad_credential: DefaultAzureCredential | None = None
         self.failed_files = set()
 
     async def __call__(self, params: TranscriptionJobParams):
@@ -40,6 +46,8 @@ class BlobTranscriptionProcessor:
             await self.process_blob_storage(params)
         finally:
             listener.stop()
+            if self._aad_credential:
+                await self._aad_credential.close()
 
     async def init_logger(self):
         log = logging.getLogger()
@@ -53,21 +61,48 @@ class BlobTranscriptionProcessor:
         return listener
 
     async def get_failed_transcriptions(self):
-        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as client:
-            try:
-                database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
-                await database.read()
-            except exceptions.CosmosResourceNotFoundError:
-                await client.create_database(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
-            container = database.get_container_client(os.getenv("CONTAINER_NAME", "transcriptions"))
-            failed_items = container.query_items(
-                query="SELECT * FROM c WHERE c.is_valid_call != 'SIM'",
-            )
+        database_name = os.getenv("COSMOS_DB_TRANSCRIPTION", "tayradb")
+        container_name = os.getenv("CONTAINER_NAME", "transcriptions")
+        logging.debug(
+            "Loading failed transcriptions (endpoint=%s, database=%s, container=%s, aad=%s)",
+            self.cosmos_endpoint,
+            database_name,
+            container_name,
+            self.use_aad_auth,
+        )
+        try:
+            async with self._get_cosmos_client() as client:
+                try:
+                    database = client.get_database_client(database_name)
+                    await database.read()
+                except exceptions.CosmosResourceNotFoundError:
+                    await client.create_database(database_name)
+                    database = client.get_database_client(database_name)
 
-            self.failed_files = {
-                f"{'/'.join(str(os.path.splitext(item.get('filename', ''))[0]).split('/')[-3:])}"
-                async for item in failed_items
-            }
+                container = database.get_container_client(container_name)
+                failed_items = container.query_items(
+                    query="SELECT * FROM c WHERE c.is_valid_call != 'SIM'",
+                )
+
+                self.failed_files = {
+                    f"{'/'.join(str(os.path.splitext(item.get('filename', ''))[0]).split('/')[-3:])}"
+                    async for item in failed_items
+                }
+        except exceptions.CosmosHttpResponseError as exc:
+            logging.error(
+                "Cosmos query failed (status=%s activityId=%s message=%s)",
+                exc.status_code,
+                exc.headers.get('x-ms-activity-id') if exc.headers else 'unknown',
+                exc.message,
+            )
+            raise
+        except Exception as exc:
+            logging.exception(
+                "Unexpected error while loading failed transcriptions from Cosmos (database=%s, container=%s)",
+                database_name,
+                container_name,
+            )
+            raise
 
     async def _process_blob_batch(
         self,
@@ -180,7 +215,7 @@ class BlobTranscriptionProcessor:
         blob_service_client: BlobServiceClient,
         transcription_params: TranscriptionJobParams
     ) -> bool:
-        condition_file = any(blob.name.endswith(ext) for ext in ["mp3", "wav"])
+        condition_file = any(blob.name.endswith(ext) for ext in ["mp3", "wav", "ogg"])
         if not condition_file:
             logging.warning("Skipping blob %s since it is not a wav or mp3 file.\n", blob.name)
             return False
@@ -203,7 +238,7 @@ class BlobTranscriptionProcessor:
 
         blob_path = "/".join(str(os.path.splitext(blob.name)[0]).split("/")[-3:])
         if transcription_params.only_failed and blob_path not in self.failed_files:
-            logging.warning("Skipping blob %s since it is not a failed file.\n", blob.name)
+            logging.warning("Skipping blob %s since it is not a valid file.\n", blob.name)
             return False
 
         if transcription_params.use_cache:
@@ -243,6 +278,7 @@ class BlobTranscriptionProcessor:
                 "file_size": blob_properties.size,
                 "transcription_duration": time.time() - start_transcription,
             }
+            logging.info("Metadata for blob %s: %s", blob_name, transcription_metadata)
 
             start_saving = time.time()
             await self.save_transcription(
@@ -283,7 +319,12 @@ class BlobTranscriptionProcessor:
     async def transcribe_file(self, blob_client, file_name: str, file_data: io.BytesIO, sem: int = 20):
         file_content = (file_name, file_data.read())
         url = os.getenv("AI_SPEECH_URL", "")
-        payload = {"definition": "{\"locales\": [\"pt-BR\"], \"profanityFilterMode\": \"None\", \"channels\":[0,1]}"}
+        speech_definition = {
+            "locales": os.getenv("SPEECH_LOCALES", "pt-BR").split(","),
+            "profanityFilterMode": os.getenv("SPEECH_PROFANITY_MODE", "None"),
+            "channels": json.loads(os.getenv("SPEECH_CHANNELS", "[0,1]")),
+        }
+        payload = {"definition": json.dumps(speech_definition)}
         files = [("audio", file_content)]
         headers = {"Ocp-Apim-Subscription-Key": self.ai_speech_key, "Accept": "application/json"}
 
@@ -292,7 +333,24 @@ class BlobTranscriptionProcessor:
                 try:
                     response = await client.post(url, headers=headers, data=payload, files=files)
                     response.raise_for_status()
-                    result = response.json()["combinedPhrases"]
+
+                    if not response.content:
+                        logging.error("Speech API returned an empty body for %s", file_name)
+                        return {"text": "Call too short or not answered."}
+
+                    try:
+                        speech_payload = response.json()
+                    except json.JSONDecodeError as exc:
+                        snippet = response.text[:200] if response.text else "<empty>"
+                        logging.error(
+                            "Speech API returned invalid JSON for %s (error=%s, body=%s)",
+                            file_name,
+                            exc,
+                            snippet,
+                        )
+                        return {"text": "Call too short or not answered."}
+
+                    result = speech_payload.get("combinedPhrases", [])
                     if not result:
                         return {"text": "Call too short or not answered."}
                     if result[0].get("text") == "":
@@ -331,6 +389,9 @@ class BlobTranscriptionProcessor:
     ):
         transcription_file_name = str(os.path.splitext(blob_name)[0]).split("/")
 
+        specialist_name = transcription_file_name[1] if len(transcription_file_name) > 1 else "UNKNOWN"
+        manager_name = transcription_file_name[0] if len(transcription_file_name) > 0 else "UNKNOWN"
+
         transcription = Transcription(
             id=str(uuid.uuid4()),
             filename=blob_name,
@@ -341,17 +402,17 @@ class BlobTranscriptionProcessor:
 
         specialist = SpecialistItem(
             id=str(uuid.uuid4()),
-            name=str(transcription_file_name[1]).upper(),
+            name=str(specialist_name).upper(),
             transcriptions = [transcription]
         )
 
         manager = ManagerModel(
             id=str(uuid.uuid4()),
-            name=str(transcription_file_name[0]).upper(),
+            name=str(manager_name[0]).upper(),
             assistants=[specialist]
         )
 
-        async with CosmosClient(self.cosmos_endpoint, self.cosmos_key) as client:
+        async with self._get_cosmos_client() as client:
             try:
                 database = client.get_database_client(os.getenv("COSMOS_DB_TRANSCRIPTION", "transcription_job"))
                 await database.read()
@@ -378,3 +439,18 @@ class BlobTranscriptionProcessor:
                 await container.create_item(manager.model_dump())
 
         logging.info("Transcription saved at: %s", transcription.id)
+
+    def _should_use_aad_auth(self) -> bool:
+        flag = os.getenv("COSMOS_USE_AAD", "")
+        if flag:
+            return flag.lower() in {"1", "true", "yes"}
+        return not bool(self.cosmos_key)
+
+    def _get_cosmos_client(self):
+        if self.use_aad_auth:
+            if not self._aad_credential:
+                self._aad_credential = DefaultAzureCredential(exclude_interactive_browser_credential=True)
+            return CosmosClient(self.cosmos_endpoint, credential=self._aad_credential)
+        if not self.cosmos_key:
+            raise RuntimeError("COSMOS_KEY is empty and AAD auth is disabled. Set COSMOS_USE_AAD=true or provide a key.")
+        return CosmosClient(self.cosmos_endpoint, self.cosmos_key)
