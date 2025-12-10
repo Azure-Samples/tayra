@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from azure.cosmos import PartitionKey
@@ -338,39 +338,78 @@ class CallClassificationAgent:
 class ClassificationPipeline:
     """Coordinates Cosmos ingestion and per-transcription classification."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        manager_name: Optional[str] = None,
+        specialist_name: Optional[str] = None,
+        limit: Optional[int] = None,
+        skip_already_classified: bool = True,
+        only_valid_calls: bool = True,
+    ) -> None:
         self.repository = CosmosTranscriptionRepository()
+        self.manager_filter = manager_name.strip().upper() if manager_name else None
+        self.specialist_filter = (
+            specialist_name.strip().upper() if specialist_name else None
+        )
+        self.limit = limit if limit and limit > 0 else None
+        self.skip_already_classified = skip_already_classified
+        self.only_valid_calls = only_valid_calls
+        self._processed = 0
 
-    async def run(self) -> None:
+    async def run(self) -> int:
         try:
             async with CallClassificationAgent() as classifier:
                 async for document in self.repository.iter_documents():
 
-                    updated = await self._classify_document(document, classifier)
+                    updated, should_stop = await self._classify_document(document, classifier)
                     if updated:
                         await self.repository.replace_document(document)
+                    if should_stop:
+                        break
         finally:
             await self.repository.close()
+        return self._processed
+
+    def _limit_reached(self) -> bool:
+        return self.limit is not None and self._processed >= self.limit
 
     async def _classify_document(
         self, document: Dict[str, Any], classifier: CallClassificationAgent
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         changed = False
         manager_name = document.get("name", "UNKNOWN")
+        manager_key = str(manager_name).upper()
+        if self.manager_filter and manager_key != self.manager_filter:
+            return False, False
         parent_document_id = str(document.get("id") or manager_name)
         assistants: List[Dict[str, Any]] = document.get("assistants", [])
+        should_stop = False
 
         for assistant in assistants:
             specialist_name = assistant.get("name", "UNKNOWN")
+            specialist_key = str(specialist_name).upper()
+            if self.specialist_filter and specialist_key != self.specialist_filter:
+                continue
             for transcription in assistant.get("transcriptions", []):
-                if transcription.get("is_valid_call") != "YES":
-                    logging.info("Skipping invalid call transcription %s/%s (%s)", manager_name, specialist_name, transcription.get("filename") or transcription.get("id"))
+                if self.only_valid_calls and transcription.get("is_valid_call") != "YES":
+                    logging.info(
+                        "Skipping invalid call transcription %s/%s (%s)",
+                        manager_name,
+                        specialist_name,
+                        transcription.get("filename") or transcription.get("id"),
+                    )
                     continue
                 metadata = transcription.setdefault("metadata", {})
-                if metadata.get("classification"):
-                    logging.info("Skipping already classified transcription %s/%s (%s)", manager_name, specialist_name, transcription.get("filename") or transcription.get("id"))
+                if self.skip_already_classified and metadata.get("classification"):
+                    logging.info(
+                        "Skipping already classified transcription %s/%s (%s)",
+                        manager_name,
+                        specialist_name,
+                        transcription.get("filename") or transcription.get("id"),
+                    )
                     continue
-                
+
                 payload = {
                     "manager_name": manager_name,
                     "specialist_name": specialist_name,
@@ -378,8 +417,12 @@ class ClassificationPipeline:
                     "transcription": transcription.get("transcription", ""),
                     "is_valid_call": transcription.get("is_valid_call"),
                 }
-                print(payload)
-                logging.info("Classifying %s/%s (%s)", manager_name, specialist_name, payload["filename"])
+                logging.info(
+                    "Classifying %s/%s (%s)",
+                    manager_name,
+                    specialist_name,
+                    payload["filename"],
+                )
                 classification = await classifier.classify(payload)
                 classification_ts = datetime.now(timezone.utc).isoformat()
                 metadata["classification"] = classification.get("label")
@@ -389,6 +432,7 @@ class ClassificationPipeline:
                 metadata["classification_ts_utc"] = classification_ts
                 transcription["metadata"] = metadata
                 changed = True
+                self._processed += 1
                 await self.repository.save_classification_record(
                     parent_document_id=parent_document_id,
                     manager_name=manager_name,
@@ -404,8 +448,13 @@ class ClassificationPipeline:
                     transcription.get("filename"),
                     metadata["classification"],
                 )
+                if self._limit_reached():
+                    should_stop = True
+                    break
+            if should_stop:
+                break
 
-        return changed
+        return changed, should_stop
 
 
 async def main() -> None:
