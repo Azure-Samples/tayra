@@ -149,3 +149,40 @@ class ClassificationDatabase:
                     parameters=parameters if parameters else None,
                 )
             ]
+
+    async def load_top_other_classifications(
+        self, limit: int = 3, order_type: str = "other"
+    ) -> List[Dict[str, Any]]:
+        capped_limit = max(1, min(limit, 50))
+        label_filter = (order_type or "other").lower()
+        async with self._get_cosmos_client() as client:
+            container = await self._get_container(client, self.classifications_container)
+            query = (
+                f"SELECT TOP {capped_limit} * FROM c "
+                "WHERE IS_DEFINED(c.classification.label) AND LOWER(c.classification.label) = @label "
+                "ORDER BY c.classification_ts_utc DESC"
+            )
+            parameters = [{"name": "@label", "value": label_filter}]
+            records = [
+                item
+                async for item in container.query_items(
+                    query=query,
+                    parameters=parameters,
+                )
+            ]
+
+        enriched: List[Dict[str, Any]] = []
+        for record in records:
+            transcription_text = record.get("transcription")
+            file_name = record.get("filename") or record.get("file_name")
+            if not transcription_text and file_name:
+                match = await self.load_transcription_by_filename(file_name)
+                if match:
+                    transcription_text = match.get("transcription")
+                    record.setdefault("metadata", match.get("metadata"))
+                    record.setdefault("file_name", match.get("file_name"))
+                    record.setdefault("is_valid_call", match.get("is_valid_call"))
+            if transcription_text:
+                record["transcription"] = transcription_text
+            enriched.append(record)
+        return enriched

@@ -344,7 +344,7 @@ class ClassificationPipeline:
         manager_name: Optional[str] = None,
         specialist_name: Optional[str] = None,
         limit: Optional[int] = None,
-        skip_already_classified: bool = True,
+        skip_already_classified: bool = False,
         only_valid_calls: bool = True,
     ) -> None:
         self.repository = CosmosTranscriptionRepository()

@@ -426,8 +426,7 @@ class BlobTranscriptionProcessor:
         api_version = os.getenv("AI_SPEECH_API_VERSION", "2025-10-15")
         return f"{base}/speechtotext/v3.2/transcriptions?api-version={api_version}"
 
-    def _build_batch_transcription_payload(self, file_name: str, sas_url: str) -> dict:
-        locales = [locale.strip() for locale in os.getenv("SPEECH_LOCALES", "en-US").split(",") if locale.strip()]
+    def _build_batch_transcription_payload(self, file_name: str, sas_url: str, locales: list[str] = ["en-US", "es-MX"]) -> dict:
         profanity_mode = os.getenv("SPEECH_PROFANITY_MODE", "Masked")
         word_timestamps = os.getenv("SPEECH_WORD_TIMESTAMPS", "true").lower() in {"true", "1", "yes"}
         diarization_enabled = os.getenv("SPEECH_DIARIZATION", "false").lower() in {"true", "1", "yes"}
@@ -439,12 +438,12 @@ class BlobTranscriptionProcessor:
                 "diarizationEnabled": diarization_enabled,
                 "wordLevelTimestampsEnabled": word_timestamps,
                 "profanityFilterMode": profanity_mode,
+                
             },
         }
-        if len(locales) == 1:
-            payload["locale"] = locales[0]
-        else:
-            payload["locales"] = locales
+        payload["locale"] = locales[0]
+        if len(locales) > 1:
+            payload["properties"]["candidateLocales"] = locales
         return payload
 
     async def _poll_transcription_job(self, client: httpx.AsyncClient, job_url: str, headers: dict[str, str], timeout_seconds: int = 900, poll_interval: int = 5):

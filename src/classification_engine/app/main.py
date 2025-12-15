@@ -131,6 +131,7 @@ async def get_transcription_by_file(file_name: str) -> JSONResponse:
     return JSONResponse({"result": data})
 
 
+
 @app.get("/classification-records", tags=["Operational Tasks"])
 async def get_classification_records(
     manager: Optional[str] = None, specialist: Optional[str] = None
@@ -141,4 +142,11 @@ async def get_classification_records(
         manager=decoded_manager,
         specialist=decoded_specialist,
     )
+    return JSONResponse({"result": data})
+
+
+@app.get("/classification-other", tags=["Operational Tasks"])
+async def get_top_other_classifications(limit: int = 3, order_type: str = "other") -> JSONResponse:
+    safe_limit = max(1, limit)
+    data = await database.load_top_other_classifications(safe_limit, order_type)
     return JSONResponse({"result": data})
