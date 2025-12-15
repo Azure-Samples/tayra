@@ -11,18 +11,28 @@ from uuid import uuid4
 from azure.cosmos import PartitionKey
 from azure.cosmos.aio import CosmosClient
 from azure.identity.aio import AzureCliCredential, DefaultAzureCredential
-from azure.ai.projects.aio import AIProjectClient
-from azure.core.pipeline import policies
-from dotenv import find_dotenv, load_dotenv
+try:
+    import agent_framework as _agent_framework_pkg
+    from agent_framework import ChatOptions
+except ImportError as exc:  # pragma: no cover - defensive guard for missing dependency
+    raise ImportError(
+        "Install agent-framework (pip install agent-framework) to run the"
+        " call center classification agent."
+    ) from exc
+
+if not hasattr(_agent_framework_pkg, "AGENT_FRAMEWORK_USER_AGENT"):
+    _agent_framework_pkg.AGENT_FRAMEWORK_USER_AGENT = "agent-framework-python/compat"
 
 try:
-    from agent_framework.azure import AzureAIClient
+    from agent_framework.azure import AzureAIAgentClient
     from agent_framework.exceptions import ServiceResponseException
 except ImportError as exc:  # pragma: no cover - defensive guard for missing dependency
     raise ImportError(
         "Install agent-framework (pip install agent-framework) to run the"
         " call center classification agent."
     ) from exc
+
+from dotenv import find_dotenv, load_dotenv
 
 
 load_dotenv(find_dotenv())
@@ -151,18 +161,10 @@ class CallClassificationAgent:
 
     def __init__(self) -> None:
         self.agent_name = os.getenv("CALL_CLASSIFIER_AGENT_NAME", "CemexCallClassifier")
-        self.use_latest_version = os.getenv("CALL_CLASSIFIER_USE_LATEST", "true").lower() in {
-            "true",
-            "1",
-            "yes",
-        }
         self._credential: Optional[AzureCliCredential] = None
         self._endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "")
         self._deployment_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME", "")
-        self._project_client: Optional[AIProjectClient] = None
-        self._client: Optional[AzureAIClient] = None
-        self._agent_cm = None
-        self._agent = None
+        self._client: Optional[AzureAIAgentClient] = None
         self.max_retries = int(os.getenv("CALL_CLASSIFIER_MAX_RETRIES", "5"))
         self.retry_backoff_seconds = float(os.getenv("CALL_CLASSIFIER_RETRY_BACKOFF", "5"))
 
@@ -175,46 +177,27 @@ class CallClassificationAgent:
                 " the CallClassificationAgent."
             )
 
-        headers_policy = policies.HeadersPolicy(headers={"Accept-Encoding": "identity"})
-        self._project_client = AIProjectClient(
-            endpoint=self._endpoint,
-            credential=self._credential,
-            headers_policy=headers_policy,
-        )
-
-        self._client = AzureAIClient(
-            project_client=self._project_client,
+        self._client = AzureAIAgentClient(
             agent_name=self.agent_name,
+            project_endpoint=self._endpoint,
             model_deployment_name=self._deployment_name,
             async_credential=self._credential,
-            use_latest_version=self.use_latest_version,
         )
-        self._agent_cm = self._client.create_agent(
-            name=self.agent_name,
-            instructions=self._build_instructions(),
-        )
-        self._agent = await self._agent_cm.__aenter__()
+        await self._client.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc, exc_tb):
-        if self._agent_cm:
-            await self._agent_cm.__aexit__(exc_type, exc, exc_tb)
         if self._client:
-            await self._client.close()
-        if self._project_client:
-            await self._project_client.close()
+            await self._client.__aexit__(exc_type, exc, exc_tb)
         if self._credential:
             await self._credential.__aexit__(exc_type, exc, exc_tb)
-        self._agent_cm = None
-        self._agent = None
-        self._project_client = None
         self._client = None
 
     def _build_instructions(self) -> str:
         return (
             "You are a quality control assistant for Cemex customer service calls in the United"
             " States. Analyze each transcript carefully, then classify the call intent using the"
-            " allowed labels (order_creation, order_modification, order_follow_up, other)."
+            " allowed labels (order_creation, order_modification, order_cancelled, order_follow_up, other)."
             " Output a compact JSON object that matches this schema exactly:"
             f" {self.RESPONSE_SCHEMA}."
             " Assess whether the caller wanted to create a new order, modify an existing one, or"
@@ -223,7 +206,7 @@ class CallClassificationAgent:
         )
 
     async def classify(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        if not self._agent:
+        if not self._client:
             raise RuntimeError(
                 "Agent not initialized. Use 'async with CallClassificationAgent()' before classifying."
             )
@@ -258,7 +241,11 @@ class CallClassificationAgent:
         attempt = 0
         while True:
             try:
-                return await self._agent.run(prompt)
+                chat_options = ChatOptions(
+                    instructions=self._build_instructions(),
+                    model_id=self._deployment_name,
+                )
+                return await self._client.get_response(prompt, chat_options=chat_options)
             except ServiceResponseException as exc:
                 attempt += 1
                 if not self._should_retry(exc, attempt):

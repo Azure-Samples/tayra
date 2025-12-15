@@ -31,9 +31,11 @@ RUN curl -sSL https://install.python-poetry.org | python && \
 
 WORKDIR /opt/pysetup
 COPY pyproject.toml ./
+COPY poetry.lock ./
 RUN poetry config virtualenvs.in-project true \
     && poetry install --no-root \
     && rm -rf $POETRY_CACHE_DIR
+
 
 FROM python-base AS environment
 ENV CLASSIFICATION_ENV=environment

@@ -8,22 +8,23 @@ packages = [{include = "src/."}]
 
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.14"
 tiktoken = "^0.7.0"
 fastapi = "^0.112.0"
 azure-storage-blob = "^12.22.0"
-httpx = "^0.27.0"
+httpx = ">=0.28.1,<0.29.0"
 python-multipart = "^0.0.9"
 aiohttp = "^3.10.3"
-uvicorn = "^0.30.6"
+uvicorn = "^0.31.1"
 python-dotenv = "^1.0.1"
 azure-cosmos = {version = "^4.7.0", allow-prereleases = true}
-aistudio-request = {git = "https://github.com/Azure-Samples/ai-requests-template.git"}
 numpy = "^2.1.1"
 scipy = "^1.14.1"
 promptflow = {extras = ["all"], version = "^1.16.1"}
 marshmallow = "3.22.0"
-agent-framework = "*"
+agent-framework = "1.0.0b251211"
+azure-ai-projects = "^1.0.0b7"
+azure-identity = "^1.17.1"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^2.15.9"
