@@ -1,0 +1,58 @@
+# Multi-stage build for the Tayra classification engine
+
+FROM python:3.12-slim AS python-base
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv"
+
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+
+RUN pip install --upgrade setuptools && \
+    pip install --upgrade pip
+
+FROM python-base AS builder-base
+RUN buildDeps="build-essential" \
+    && apt-get update \
+    && apt-get install --no-install-recommends -y \
+        curl \
+        vim \
+    && apt-get install -y --no-install-recommends $buildDeps \
+    && rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl -sSL https://install.python-poetry.org | python && \
+    chmod a+x /opt/poetry/bin/poetry
+
+WORKDIR /opt/pysetup
+COPY pyproject.toml ./
+COPY poetry.lock ./
+RUN poetry config virtualenvs.in-project true \
+    && poetry install --no-root \
+    && rm -rf $POETRY_CACHE_DIR
+
+
+FROM python-base AS environment
+ENV CLASSIFICATION_ENV=environment
+
+COPY --from=builder-base "$VENV_PATH" "$VENV_PATH"
+
+RUN groupadd -g 1500 classification && \
+    useradd -m -u 1500 -g classification classification && \
+    mkdir -p /src
+
+RUN chown -R classification:classification /src
+
+USER classification
+WORKDIR /src
+
+COPY ./src/classification_engine/app ./app
+COPY .env .env
+
+EXPOSE 8000
+CMD ["uvicorn", "--proxy-headers", "--host=0.0.0.0", "--port=8000", "app.main:app"]

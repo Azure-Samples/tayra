@@ -12,6 +12,7 @@ class Transcription(BaseModel):
     transcription: str
     is_valid_call: str
     metadata: dict
+    failure_reason: Optional[str] = None
 
 
 class SpecialistItem(BaseModel):
