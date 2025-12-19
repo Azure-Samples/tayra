@@ -15,7 +15,7 @@ param deploymentTimestamp string = utcNow('yyyyMMddHHmmss')
 param uniquePrefix string = substring(uniqueString(subscription().id, deploymentTimestamp), 0, 4)
 
 @description('The name of the resource group to create')
-param resourceGroupName string = 'rg-tayra-callcenter-poc'
+param resourceGroupName string = 'rg-tayra-callcenter-poc-outro-teste'
 
 @description('cosmosdb account name. It has to be unique.Type a name followed by your resource group name. (<name>-<resourceGroupName>)')
 param cosmosDbAccountName string = 'tayracosmosdb-${uniquePrefix}'

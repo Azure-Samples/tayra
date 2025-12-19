@@ -41,6 +41,7 @@ class BlobTranscriptionProcessor:
         self.storage_account_name, self.storage_account_key = self._parse_storage_connection_string(self.storage_connection_string)
         self.use_aad_auth = self._should_use_aad_auth()
         self._aad_credential: DefaultAzureCredential | None = None
+        self._log_stream: io.StringIO | None = None
         self.failed_files = set()
 
     async def __call__(self, params: TranscriptionJobParams):
@@ -54,12 +55,15 @@ class BlobTranscriptionProcessor:
                 await self._aad_credential.close()
 
     async def init_logger(self):
+        self._log_stream = io.StringIO()
         log = logging.getLogger()
         que = Queue()
         queue_handler = QueueHandler(que)
         log.addHandler(queue_handler)
         log.setLevel(logging.INFO)
-        listener = QueueListener(que, logging.StreamHandler(stream=sys.stdout))
+        stdout_handler = logging.StreamHandler(stream=sys.stdout)
+        buffer_handler = logging.StreamHandler(stream=self._log_stream)
+        listener = QueueListener(que, stdout_handler, buffer_handler)
         listener.start()
         logging.debug('Logger has started')
         return listener
@@ -171,8 +175,9 @@ class BlobTranscriptionProcessor:
         logging.info("Running for manager %s and specialist %s", params.manager_name, params.specialist_name)
         logging.info("Starting transcription process for container %s with limit %s", params.origin_container, params.limit)
         logging.info("Using %s asynchronous semaphores", params.semaphores)
-        start_overall = time.time()
-        logging.info("Starting job on %s", start_overall)
+        start_timestamp = datetime.utcnow()
+        start_overall = time.perf_counter()
+        logging.info("Starting job at %s UTC", start_timestamp.isoformat())
 
         await self.get_failed_transcriptions()
         checked_transcriptions_cache = {}
@@ -184,26 +189,36 @@ class BlobTranscriptionProcessor:
 
         transcription_metadata, counter = await self._process_batch(prefix, checked_transcriptions_cache, results_per_page, params)
 
-        end_overall = time.time()
-        logging.info("Job finished on %s", end_overall)
+        end_timestamp = datetime.utcnow()
+        end_overall = time.perf_counter()
+        logging.info("Job finished at %s UTC", end_timestamp.isoformat())
         overall_duration = end_overall - start_overall
+        human_duration = str(timedelta(seconds=round(overall_duration)))
 
         logging.info(
-            "Processed %s blobs in %s seconds.\n",
+            "Processed %s blobs in %.2f seconds (~%s).\n",
             counter,
             overall_duration,
+            human_duration,
         )
 
         metadata = {
             "transcription_duration": overall_duration,
+            "transcription_duration_human": human_duration,
             "processed_files": counter,
             "transcriptions": transcription_metadata,
+            "started_at_utc": start_timestamp.isoformat(),
+            "finished_at_utc": end_timestamp.isoformat(),
         }
 
         logging.info("Metadata: %s", transcription_metadata)
 
+        run_timestamp = str(time.time())
+        output_file = f"metadata-{run_timestamp}.json"
+        log_file = f"logs-{run_timestamp}.txt"
+        log_data = self._log_stream.getvalue() if self._log_stream else ""
+        metadata["log_blob"] = log_file
         metadata_json = json.dumps(metadata, ensure_ascii=True)
-        output_file = f"metadata-{str(time.time())}.json"
 
         async with BlobServiceClient.from_connection_string(self.storage_connection_string) as blob_service_client:
             metadata_blob_client = blob_service_client.get_blob_client(
@@ -211,9 +226,13 @@ class BlobTranscriptionProcessor:
             )
 
             await metadata_blob_client.upload_blob(metadata_json, overwrite=True)
+            log_blob_client = blob_service_client.get_blob_client(
+                container=params.destination_container, blob=log_file
+            )
+            await log_blob_client.upload_blob(log_data, overwrite=True)
         logging.info("Metadata written to file: %s", output_file)
         logging.info("Finished uploading to blob: %s", output_file)
-        print("Tarefas: ", len(transcription_metadata))
+        logging.info("Log output written to file: %s", log_file)
 
     async def is_blob_valid(
         self,
@@ -340,6 +359,10 @@ class BlobTranscriptionProcessor:
             return self._short_call_result("missing_endpoint")
 
         payload = self._build_batch_transcription_payload(file_name, sas_url)
+        if os.getenv("CHANGE_BASE_MODEL"):
+            payload["model"] = {"self": os.getenv("CHANGE_BASE_MODEL")}
+            payload["properties"]["wordLevelTimestampsEnabled"] = "false"
+
         headers = {
             "Ocp-Apim-Subscription-Key": self.ai_speech_key,
             "Content-Type": "application/json",
@@ -351,12 +374,21 @@ class BlobTranscriptionProcessor:
                 try:
                     response = await client.post(speech_url, headers=headers, json=payload)
                     response.raise_for_status()
-                    job_location = response.headers.get("Location") or response.headers.get("location")
+                    job_location = (
+                        response.headers.get("Operation-Location")
+                        or response.headers.get("operation-location")
+                        or response.headers.get("Location")
+                        or response.headers.get("location")
+                    )
                     if not job_location:
                         logging.error("Speech batch job missing Location header for %s", file_name)
                         return self._short_call_result("missing_location")
 
-                    job_result = await self._poll_transcription_job(client, job_location, headers)
+                    normalized_location = self._normalize_job_location(job_location)
+
+                    job_result = await self._poll_transcription_job(client, normalized_location, headers)
+                    model_name = job_result.get("model")
+                    logging.info("Model being used: %s", model_name or "unknown")
                     status = job_result.get("status")
                     logging.info("Speech batch job status for %s: %s", file_name, status)
 
@@ -424,7 +456,15 @@ class BlobTranscriptionProcessor:
         if not base:
             return None
         api_version = os.getenv("AI_SPEECH_API_VERSION", "2025-10-15")
-        return f"{base}/speechtotext/v3.2/transcriptions?api-version={api_version}"
+        return f"{base}/speechtotext/transcriptions:submit?api-version={api_version}"
+
+    def _normalize_job_location(self, job_url: str) -> str:
+        api_version = os.getenv("AI_SPEECH_API_VERSION", "2025-10-15")
+        normalized = job_url.replace("transcriptions:submit", "transcriptions")
+        if "api-version" not in normalized:
+            separator = "&" if "?" in normalized else "?"
+            normalized = f"{normalized}{separator}api-version={api_version}"
+        return normalized
 
     def _build_batch_transcription_payload(self, file_name: str, sas_url: str, locales: list[str] = ["en-US", "es-MX"]) -> dict:
         profanity_mode = os.getenv("SPEECH_PROFANITY_MODE", "Masked")
@@ -435,15 +475,22 @@ class BlobTranscriptionProcessor:
             "description": "Tayra batch transcription",
             "contentUrls": [sas_url],
             "properties": {
-                "diarizationEnabled": diarization_enabled,
+                "diarization":{
+                    "enabled": diarization_enabled,
+                    "maxSpeakerCount": 10
+                },
                 "wordLevelTimestampsEnabled": word_timestamps,
                 "profanityFilterMode": profanity_mode,
+                "timeToLiveHours": 48,
                 
             },
         }
         payload["locale"] = locales[0]
         if len(locales) > 1:
-            payload["properties"]["candidateLocales"] = locales
+            payload["properties"]["languageIdentification"] = {
+                "candidateLocales": list(locales),
+                "mode": "Continuous",
+            }
         return payload
 
     async def _poll_transcription_job(self, client: httpx.AsyncClient, job_url: str, headers: dict[str, str], timeout_seconds: int = 900, poll_interval: int = 5):
