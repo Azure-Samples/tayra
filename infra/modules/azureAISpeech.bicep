@@ -5,9 +5,9 @@ param location string = resourceGroup().location
 param speechAccountName string
 
 
-resource speechAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+resource speechAccount 'Microsoft.CognitiveServices/accounts@2025-09-01' = {
   name: speechAccountName
-  location: location
+  location: 'eastus'
   kind: 'SpeechServices'
   sku: {
     name: 'S0'
